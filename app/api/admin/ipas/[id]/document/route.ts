@@ -3,7 +3,7 @@ import { isAdmin } from "@/lib/auth";
 import { pool } from "@/lib/db";
 import { redirectTo, withError } from "@/lib/admin";
 
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = 4 * 1024 * 1024;
 const ALLOWED = new Set([
   "application/pdf",
   "application/msword",
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const form = await req.formData();
   const file = form.get("file");
   if (!(file instanceof File) || file.size === 0) return withError(req, path, "Choose a file to upload");
-  if (file.size > MAX_BYTES) return withError(req, path, "File is larger than 5 MB");
+  if (file.size > MAX_BYTES) return withError(req, path, "File is larger than 4 MB");
   if (!ALLOWED.has(file.type)) return withError(req, path, "Upload a PDF, Word document, text, Markdown, PNG or JPG");
 
   const bytes = Buffer.from(await file.arrayBuffer());

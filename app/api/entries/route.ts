@@ -5,8 +5,10 @@ import { todayLagos, shiftDate } from "@/lib/lagos";
 import { memberRequirements } from "@/lib/status";
 import { memberStats } from "@/lib/stats";
 import { allDoneLine, taskDoneLine } from "@/lib/copy";
+import { compressProof } from "@/lib/image";
 
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+// Hosts cap request bodies near 4.5 MB. The browser shrinks first and the server re-encodes after.
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 export async function POST(req: NextRequest) {
@@ -41,13 +43,17 @@ export async function POST(req: NextRequest) {
   let imageType: string | null = null;
   if (file instanceof File && file.size > 0) {
     if (file.size > MAX_IMAGE_BYTES) {
-      return NextResponse.json({ error: "That screenshot is over 2 MB. Try a smaller one." }, { status: 400 });
+      return NextResponse.json({ error: "That screenshot is over 4 MB. Try a smaller one." }, { status: 400 });
     }
     if (!IMAGE_TYPES.has(file.type)) {
       return NextResponse.json({ error: "Screenshots must be PNG, JPG or WebP" }, { status: 400 });
     }
-    image = Buffer.from(await file.arrayBuffer());
-    imageType = file.type;
+    try {
+      image = await compressProof(Buffer.from(await file.arrayBuffer()));
+      imageType = "image/jpeg";
+    } catch {
+      return NextResponse.json({ error: "That file is not a readable image" }, { status: 400 });
+    }
   }
 
   if (requirement.requires_proof && !link && !image) {

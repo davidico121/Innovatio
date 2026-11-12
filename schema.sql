@@ -112,3 +112,6 @@ create table if not exists goals (
   created_at timestamptz not null default now()
 );
 create index if not exists goals_member_month on goals(member_id, month);
+
+-- v5: screenshots are purged after 60 days; this marks entries whose proof was removed.
+alter table entries add column if not exists proof_purged boolean not null default false;

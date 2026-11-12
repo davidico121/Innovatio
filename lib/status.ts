@@ -1,6 +1,9 @@
 import { pool } from "./db";
 import { isDueDay, recentDates, shiftDate } from "./lagos";
 
+/** Screenshots are deleted after this many days to stay inside the free database. */
+export const PROOF_RETENTION_DAYS = 60;
+
 /** Completion rate below this (over completed days) gets flagged for follow-up. */
 export const FLAG_RATE = 70;
 
@@ -193,6 +196,7 @@ export type EntryRow = {
   count: number;
   proof_url: string | null;
   has_image: boolean;
+  proof_purged: boolean;
   notes: string | null;
 };
 
@@ -201,7 +205,7 @@ export async function memberEntries(memberId: number, days: number): Promise<Ent
   const from = recentDates(days)[days - 1];
   const { rows } = await pool.query(
     `select e.id, to_char(e.work_date, 'YYYY-MM-DD') as work_date, wt.label,
-            e.count, e.proof_url, (e.proof_image is not null) as has_image, e.notes
+            e.count, e.proof_url, (e.proof_image is not null) as has_image, e.proof_purged, e.notes
        from entries e
        join work_types wt on wt.key = e.work_key
       where e.member_id = $1 and e.work_date >= $2::date

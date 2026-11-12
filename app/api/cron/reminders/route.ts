@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 import { dayOfYear, shiftDate, todayLagos } from "@/lib/lagos";
-import { consistencyReport, isFlagged, isMemberDue } from "@/lib/status";
+import { PROOF_RETENTION_DAYS, consistencyReport, isFlagged, isMemberDue } from "@/lib/status";
 import { memberStats } from "@/lib/stats";
 import { sendEmail, sendPush } from "@/lib/notify";
 import { MILESTONES, milestoneLine, quoteFor } from "@/lib/copy";
 
 export const dynamic = "force-dynamic";
+// Sending to every member one by one can outlast the host default, so ask for the maximum.
+export const maxDuration = 60;
 
 /**
  * Trigger from any scheduler with header `Authorization: Bearer $CRON_SECRET`:
@@ -15,6 +17,7 @@ export const dynamic = "force-dynamic";
  *   ?kind=quote    an occasional encouragement (every other day, pushes only)
  *   ?kind=weekly   a recap email for the week just finished (Mondays only, add &force=1 to override)
  *   ?kind=digest   email the admin: who needs a nudge, who is doing well
+ *   ?kind=cleanup  delete screenshots older than 60 days and old reminder logs
  *
  * A reminder is recorded only after it goes out, so a failure is retried by
  * the next run, and one failing member never stops the others.
@@ -30,6 +33,9 @@ export async function GET(req: NextRequest) {
   }
 
   const kind = req.nextUrl.searchParams.get("kind");
+  if (!["morning", "evening", "quote", "weekly", "digest", "cleanup"].includes(kind ?? "")) {
+    return NextResponse.json({ error: "Unknown kind" }, { status: 400 });
+  }
   const today = todayLagos();
   const yesterday = shiftDate(today, -1);
   const app = process.env.APP_URL;
@@ -160,6 +166,16 @@ export async function GET(req: NextRequest) {
       failed.push(ADMIN_KEY);
       console.error("digest failed", err);
     }
+  }
+
+  if (kind === "cleanup") {
+    const purged = await pool.query(
+      `update entries set proof_image = null, proof_image_type = null, proof_purged = true
+        where proof_image is not null and work_date < $1::date`,
+      [shiftDate(today, -PROOF_RETENTION_DAYS)],
+    );
+    const logs = await pool.query(`delete from reminder_log where sent_on < $1::date`, [shiftDate(today, -90)]);
+    return NextResponse.json({ kind, screenshotsRemoved: purged.rowCount ?? 0, logRowsRemoved: logs.rowCount ?? 0 });
   }
 
   return NextResponse.json({ kind, sent, failed }, { status: failed.length > 0 ? 500 : 200 });

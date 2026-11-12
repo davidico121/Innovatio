@@ -108,7 +108,7 @@ export default async function IpaPage({
         <input name="file" type="file" accept=".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg" required />
         <button type="submit" style={field}>Upload document</button>
       </form>
-      <p>Up to 5 MB. Uploading replaces the current document.</p>
+      <p>Up to 4 MB. Uploading replaces the current document.</p>
     </main>
   );
 }

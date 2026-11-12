@@ -10,6 +10,7 @@ type Entry = {
   count: number;
   proof_url: string | null;
   has_image: boolean;
+  proof_purged: boolean;
   notes: string | null;
 };
 
@@ -72,7 +73,7 @@ export default function EntryRow({ entry }: { entry: Entry }) {
               link
             </a>
           )}
-          {!entry.has_image && !entry.proof_url && "none"}
+          {!entry.has_image && !entry.proof_url && (entry.proof_purged ? "screenshot removed after 60 days" : "none")}
         </td>
         <td style={cell}>{entry.notes ?? ""}</td>
         <td style={cell}>

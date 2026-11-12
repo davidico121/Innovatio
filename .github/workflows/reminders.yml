@@ -1,0 +1,67 @@
+# Calls the app's reminder endpoints on a schedule. Needs two repository secrets:
+#   APP_URL      the deployed site, e.g. https://innovatio.vercel.app (no trailing slash)
+#   CRON_SECRET  the same value as the CRON_SECRET environment variable on the host
+#
+# Times are UTC; Lagos is UTC+1 all year. Minutes avoid :00 because GitHub delays
+# scheduled runs most at the top of the hour. Runs can still start several minutes late.
+name: Reminders
+
+on:
+  schedule:
+    - cron: "5 2 * * *"      # 03:05 Lagos, cleanup
+    - cron: "35 6 * * *"     # 07:35 Lagos, digest to the admin
+    - cron: "10 7 * * 1"     # 08:10 Lagos Mondays, weekly recap
+    - cron: "25 7 * * *"     # 08:25 Lagos, morning message
+    - cron: "40 10 * * *"    # 11:40 Lagos, occasional quote
+    - cron: "25 17 * * *"    # 18:25 Lagos, evening nudge
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: "Which reminder to run now"
+        type: choice
+        required: true
+        options: [morning, evening, quote, weekly, digest, cleanup]
+
+permissions: {}
+
+jobs:
+  call:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Pick the reminder
+        id: pick
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT_KIND: ${{ github.event.inputs.kind }}
+        run: |
+          if [ -n "$INPUT_KIND" ]; then kind="$INPUT_KIND"; else
+            case "$SCHEDULE" in
+              "5 2 * * *")   kind=cleanup ;;
+              "35 6 * * *")  kind=digest ;;
+              "10 7 * * 1")  kind=weekly ;;
+              "25 7 * * *")  kind=morning ;;
+              "40 10 * * *") kind=quote ;;
+              "25 17 * * *") kind=evening ;;
+              *) echo "No reminder is mapped to schedule '$SCHEDULE'" >&2; exit 1 ;;
+            esac
+          fi
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"
+
+      - name: Call the app
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          KIND: ${{ steps.pick.outputs.kind }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "Set the APP_URL and CRON_SECRET repository secrets first." >&2; exit 1
+          fi
+          # --fail turns a 4xx or 5xx into a failed run, which GitHub emails to you.
+          # --retry covers timeouts, 429 and 5xx only, so a wrong secret or bad kind
+          # fails at once. The app skips reminders already sent, so a retry is safe.
+          curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-delay 20 --max-time 90 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${APP_URL%/}/api/cron/reminders?kind=${KIND}"
+          echo

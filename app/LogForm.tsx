@@ -6,16 +6,16 @@ import { celebrate } from "./Toaster";
 
 type Work = { key: string; label: string; requires_proof: boolean };
 
-/** Shrinks a screenshot in the browser so each proof stays well under the 2 MB limit. */
+/** Shrinks a screenshot before upload, to save mobile data and stay under the host's request size limit. The server re-encodes it again. */
 async function shrink(file: File): Promise<File> {
-  if (file.size < 300 * 1024 || !file.type.startsWith("image/")) return file;
+  if (file.size < 150 * 1024 || !file.type.startsWith("image/")) return file;
   const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const scale = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(bmp.width * scale);
   canvas.height = Math.round(bmp.height * scale);
   canvas.getContext("2d")!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", 0.82));
+  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", 0.8));
   return blob && blob.size < file.size ? new File([blob], "proof.jpg", { type: "image/jpeg" }) : file;
 }
 
