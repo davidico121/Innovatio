@@ -1,4 +1,6 @@
-import { currentMember } from "@/lib/auth";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { currentSession } from "@/lib/auth";
 import { pool } from "@/lib/db";
 import { dayProgress } from "@/lib/status";
 import { memberStats } from "@/lib/stats";
@@ -13,10 +15,9 @@ import Goals from "./Goals";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const me = await currentMember();
-  if (!me) {
-    return <p>Open your personal sign-in link from your manager to continue.</p>;
-  }
+  const me = await currentSession();
+  if (!me) redirect("/login");
+  if (me.mustSetup) redirect("/welcome");
 
   const today = todayLagos();
   const yesterday = shiftDate(today, -1);
@@ -109,7 +110,9 @@ export default async function Home() {
         <p className="muted">Friendly nudges and the odd bit of encouragement, on this device.</p>
         <PushButton />
       </section>
-      <p className="muted" style={{ textAlign: "center", fontSize: "0.85rem" }}>Your to-dos and goals are private. Only you can see them.</p>
+      <p className="muted" style={{ textAlign: "center", fontSize: "0.85rem" }}>
+        Your to-dos and goals are private. Only you can see them. <Link href="/account">Account</Link>
+      </p>
     </main>
   );
 }

@@ -26,6 +26,16 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const today = todayLagos();
   const rows = await consistencyReport(14);
   const ipas = (await pool.query(`select id, name from ipas order by name`)).rows as { id: number; name: string }[];
+  const accounts = new Map(
+    (
+      await pool.query(
+        `select id, (password_hash is not null) as invited, must_setup, (temp_expires_at < now()) as expired from members`,
+      )
+    ).rows.map((r: { id: number; invited: boolean; must_setup: boolean; expired: boolean }) => [
+      r.id,
+      !r.invited ? "Not invited" : r.must_setup ? (r.expired ? "Invite expired" : "Invite pending") : "Active",
+    ]),
+  );
 
   return (
     <main>
@@ -52,7 +62,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       <table style={{ borderCollapse: "collapse", width: "100%" }}>
         <thead>
           <tr>
-            {["Name", "IPA", "Days met", "Rate", "Streak", "Last log", "Reminders", "Flag"].map((h) => (
+            {["Name", "Account", "IPA", "Days met", "Rate", "Streak", "Last log", "Reminders", "Flag"].map((h) => (
               <th key={h} style={th}>
                 {h}
               </th>
@@ -65,6 +75,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
               <td style={td}>
                 <Link href={`/admin/members/${r.id}`}>{r.name}</Link>
               </td>
+              <td style={td}>{accounts.get(r.id)}</td>
               <td style={td}>{r.ipaName ?? "none"}</td>
               <td style={td}>
                 {r.days === 0 ? "n/a" : `${r.metDays}/${r.days}`}

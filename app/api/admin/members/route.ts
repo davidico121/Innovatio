@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdmin } from "@/lib/auth";
 import { pool } from "@/lib/db";
-import { redirectTo, withError } from "@/lib/admin";
+import { redirectTo } from "@/lib/admin";
+import { sendInvite } from "@/lib/invite";
+import { withError } from "@/lib/admin";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -22,5 +24,7 @@ export async function POST(req: NextRequest) {
     [name, email, ipaId],
   );
   if (rows.length === 0) return withError(req, "/admin", "A member with that email already exists");
-  return redirectTo(req, `/admin/members/${rows[0].id}`);
+  const invite = await sendInvite(rows[0].id);
+  const note = invite.ok ? `notice=${encodeURIComponent(`Invite sent to ${email}.`)}` : `error=${encodeURIComponent(`Member added. ${invite.error}`)}`;
+  return redirectTo(req, `/admin/members/${rows[0].id}?${note}`);
 }

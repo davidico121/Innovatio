@@ -17,7 +17,7 @@ export const maxDuration = 60;
  *   ?kind=quote    an occasional encouragement (every other day, pushes only)
  *   ?kind=weekly   a recap email for the week just finished (Mondays only, add &force=1 to override)
  *   ?kind=digest   email the admin: who needs a nudge, who is doing well
- *   ?kind=cleanup  delete screenshots older than 60 days and old reminder logs
+ *   ?kind=cleanup  delete screenshots older than 60 days, old reminder logs, expired sessions
  *
  * A reminder is recorded only after it goes out, so a failure is retried by
  * the next run, and one failing member never stops the others.
@@ -175,6 +175,8 @@ export async function GET(req: NextRequest) {
       [shiftDate(today, -PROOF_RETENTION_DAYS)],
     );
     const logs = await pool.query(`delete from reminder_log where sent_on < $1::date`, [shiftDate(today, -90)]);
+    await pool.query(`delete from sessions where expires_at < now()`);
+    await pool.query(`delete from login_attempts where created_at < now() - interval '1 day'`);
     return NextResponse.json({ kind, screenshotsRemoved: purged.rowCount ?? 0, logRowsRemoved: logs.rowCount ?? 0 });
   }
 

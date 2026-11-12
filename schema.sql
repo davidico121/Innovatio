@@ -29,7 +29,6 @@ create table if not exists members (
   id serial primary key,
   name text not null,
   email text not null unique,
-  token text not null unique default (replace(gen_random_uuid()::text,'-','') || replace(gen_random_uuid()::text,'-','')),
   active boolean not null default true,
   ipa_id int references ipas(id) on delete set null,
   created_at timestamptz not null default now()
@@ -81,10 +80,7 @@ insert into ipa_tasks (ipa_id, work_key, daily_min, requires_proof)
   select id, 'email_outreach', 500, true from ipas where name = 'Email outreach IPA'
   on conflict do nothing;
 
--- Assign a member: insert into members (name, email, ipa_id)
---   values ('Jane Doe', 'jane@example.com', (select id from ipas where name = 'Email outreach IPA'))
---   returning id, token;
--- Signed link to send them: https://YOUR_APP_URL/api/login?token=<token>
+-- Members are added from the admin screen. They get an email with a temporary password.
 
 -- v4: screenshot proof, personal todos and monthly goals.
 alter table entries add column if not exists proof_image bytea;
@@ -115,3 +111,30 @@ create index if not exists goals_member_month on goals(member_id, month);
 
 -- v5: screenshots are purged after 60 days; this marks entries whose proof was removed.
 alter table entries add column if not exists proof_purged boolean not null default false;
+
+-- v6: email and password sign-in. Safe to run again on an existing database.
+alter table members add column if not exists password_hash text;
+alter table members add column if not exists must_setup boolean not null default true;
+alter table members add column if not exists temp_expires_at timestamptz;
+alter table members add column if not exists invited_at timestamptz;
+alter table members add column if not exists last_login_at timestamptz;
+-- The old personal sign-in link is retired so it cannot be used as a back door.
+alter table members drop column if exists token;
+
+create table if not exists sessions (
+  id serial primary key,
+  member_id int not null references members(id) on delete cascade,
+  token_hash text not null unique,      -- sha256 of the cookie value, never the value itself
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists sessions_member on sessions(member_id);
+
+create table if not exists login_attempts (
+  id serial primary key,
+  key text not null,                    -- lowercased email that was tried
+  ip text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists login_attempts_key on login_attempts(key, created_at);
+create index if not exists login_attempts_ip on login_attempts(ip, created_at);
