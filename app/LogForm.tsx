@@ -1,98 +1,77 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { celebrate } from "./Toaster";
 
 type Work = { key: string; label: string; requires_proof: boolean };
 
-export default function LogForm({
-  work,
-  today,
-  yesterday,
-}: {
-  work: Work[];
-  today: string;
-  yesterday: string;
-}) {
+/** Shrinks a screenshot in the browser so each proof stays well under the 2 MB limit. */
+async function shrink(file: File): Promise<File> {
+  if (file.size < 300 * 1024 || !file.type.startsWith("image/")) return file;
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bmp.width * scale);
+  canvas.height = Math.round(bmp.height * scale);
+  canvas.getContext("2d")!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", 0.82));
+  return blob && blob.size < file.size ? new File([blob], "proof.jpg", { type: "image/jpeg" }) : file;
+}
+
+export default function LogForm({ work, today, yesterday }: { work: Work[]; today: string; yesterday: string }) {
+  const router = useRouter();
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState(work[0]?.key ?? "");
-
   const needsProof = work.find((w) => w.key === selected)?.requires_proof ?? false;
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const f = new FormData(e.currentTarget);
+    const formEl = e.currentTarget;
+    const f = new FormData(formEl);
     setBusy(true);
     setStatus("");
-    const res = await fetch("/api/entries", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        work_key: f.get("work_key"),
-        work_date: f.get("work_date"),
-        count: Number(f.get("count")),
-        proof_url: f.get("proof_url"),
-        notes: f.get("notes"),
-      }),
-    });
+    const shot = f.get("proof_image");
+    if (shot instanceof File && shot.size > 0) f.set("proof_image", await shrink(shot));
+    const res = await fetch("/api/entries", { method: "POST", body: f });
     const data = await res.json();
     setBusy(false);
     if (!res.ok) {
       setStatus(data.error ?? "Could not save");
       return;
     }
-    e.currentTarget.reset();
+    formEl.reset();
     setSelected(work[0]?.key ?? "");
-    setStatus("Saved.");
-    window.location.reload();
+    setStatus(data.celebrations.length ? "" : "Logged. Every one counts.");
+    celebrate(data.celebrations);
+    router.refresh();
   }
 
+  if (work.length === 0) return <p className="muted">You have no targets yet. Your manager will assign them.</p>;
+
   return (
-    <form onSubmit={submit} style={{ display: "grid", gap: 8, maxWidth: 480 }}>
-      <label>
-        Work type
-        <select
-          name="work_key"
-          value={selected}
-          onChange={(e) => setSelected(e.target.value)}
-          style={{ width: "100%", padding: 8 }}
-        >
-          {work.map((w) => (
-            <option key={w.key} value={w.key}>
-              {w.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Date
-        <select name="work_date" defaultValue={today} style={{ width: "100%", padding: 8 }}>
+    <form onSubmit={submit} className="stack" style={{ gap: 10 }}>
+      <select name="work_key" value={selected} onChange={(e) => setSelected(e.target.value)} className="field" aria-label="Work type">
+        {work.map((w) => (
+          <option key={w.key} value={w.key}>{w.label}</option>
+        ))}
+      </select>
+      <div className="row">
+        <input name="count" type="number" min={1} defaultValue={1} required className="field" aria-label="How many" />
+        <select name="work_date" defaultValue={today} className="field" aria-label="Date">
           <option value={today}>Today</option>
           <option value={yesterday}>Yesterday</option>
         </select>
+      </div>
+      <label className="muted">
+        Proof {needsProof ? "(a screenshot or a link)" : "(optional)"}
+        <input name="proof_image" type="file" accept="image/png,image/jpeg,image/webp" className="field" style={{ marginTop: 6 }} />
       </label>
-      <label>
-        Count
-        <input name="count" type="number" min={1} defaultValue={1} required style={{ width: "100%", padding: 8 }} />
-      </label>
-      <label>
-        Proof link {needsProof ? "(required)" : "(optional)"}
-        <input
-          name="proof_url"
-          type="url"
-          placeholder="https://"
-          required={needsProof}
-          style={{ width: "100%", padding: 8 }}
-        />
-      </label>
-      <label>
-        Notes (optional)
-        <input name="notes" maxLength={500} style={{ width: "100%", padding: 8 }} />
-      </label>
-      <button type="submit" disabled={busy} style={{ padding: 10 }}>
-        {busy ? "Saving..." : "Save entry"}
-      </button>
-      {status && <p>{status}</p>}
+      <input name="proof_url" type="url" placeholder="Or paste a link, https://" className="field" aria-label="Proof link" />
+      <input name="notes" maxLength={500} placeholder="Notes (optional)" className="field" aria-label="Notes" />
+      <button type="submit" disabled={busy} className="btn">{busy ? "Saving..." : "Log it"}</button>
+      {status && <p className={status.startsWith("Logged") ? "muted" : "err"}>{status}</p>}
     </form>
   );
 }

@@ -30,10 +30,11 @@ export async function memberRequirements(memberId: number): Promise<Requirement[
 /** Whether the member's IPA counts this date. A member with no IPA is never due. */
 export async function isMemberDue(memberId: number, date: string): Promise<boolean> {
   const { rows } = await pool.query(
-    `select i.counts_weekends from members m join ipas i on i.id = m.ipa_id where m.id = $1`,
+    `select i.counts_weekends, to_char(m.created_at at time zone 'Africa/Lagos', 'YYYY-MM-DD') as joined
+       from members m join ipas i on i.id = m.ipa_id where m.id = $1`,
     [memberId],
   );
-  return rows[0] ? isDueDay(date, rows[0].counts_weekends) : false;
+  return rows[0] ? date >= rows[0].joined && isDueDay(date, rows[0].counts_weekends) : false;
 }
 
 export async function dayProgress(memberId: number, date: string): Promise<DayRow[]> {
@@ -76,11 +77,12 @@ export async function consistencyReport(days: number): Promise<ConsistencyRow[]>
 
   const members = (
     await pool.query(
-      `select m.id, m.name, m.email, i.name as ipa_name, i.counts_weekends
+      `select m.id, m.name, m.email, i.name as ipa_name, i.counts_weekends,
+              to_char(m.created_at at time zone 'Africa/Lagos', 'YYYY-MM-DD') as joined
          from members m left join ipas i on i.id = m.ipa_id
         where m.active order by m.name`,
     )
-  ).rows as { id: number; name: string; email: string; ipa_name: string | null; counts_weekends: boolean | null }[];
+  ).rows as { id: number; name: string; email: string; ipa_name: string | null; counts_weekends: boolean | null; joined: string }[];
 
   const reqs = (
     await pool.query(
@@ -117,7 +119,7 @@ export async function consistencyReport(days: number): Promise<ConsistencyRow[]>
 
   return members.map((m) => {
     const mine = reqs.filter((r) => r.member_id === m.id);
-    const dueDates = dates.filter((d) => m.counts_weekends !== null && isDueDay(d, m.counts_weekends));
+    const dueDates = dates.filter((d) => d >= m.joined && m.counts_weekends !== null && isDueDay(d, m.counts_weekends));
     const metByDate = dueDates.map(
       (d) =>
         mine.length > 0 &&
@@ -145,24 +147,26 @@ export async function consistencyReport(days: number): Promise<ConsistencyRow[]>
 }
 
 export function isFlagged(r: { rate: number; days: number; lastLogged: string | null }, today: string): boolean {
-  if (r.days === 0) return r.lastLogged === null;
+  if (r.days === 0) return false;
   return r.rate < FLAG_RATE || r.lastLogged === null || r.lastLogged < shiftDate(today, -2);
 }
 
-async function countsWeekends(memberId: number): Promise<boolean> {
+async function memberCalendar(memberId: number): Promise<{ weekends: boolean; joined: string }> {
   const { rows } = await pool.query(
-    `select coalesce(i.counts_weekends, false) as w from members m left join ipas i on i.id = m.ipa_id where m.id = $1`,
+    `select coalesce(i.counts_weekends, false) as w,
+            to_char(m.created_at at time zone 'Africa/Lagos', 'YYYY-MM-DD') as joined
+       from members m left join ipas i on i.id = m.ipa_id where m.id = $1`,
     [memberId],
   );
-  return rows[0]?.w ?? false;
+  return { weekends: rows[0]?.w ?? false, joined: rows[0]?.joined ?? "0000-00-00" };
 }
 
 export type TypeRow = { key: string; label: string; daily_min: number; metDays: number; days: number };
 
 /** Per work type: how many of the last `days` completed days the member hit its target. */
 export async function typeBreakdown(memberId: number, days: number): Promise<TypeRow[]> {
-  const weekends = await countsWeekends(memberId);
-  const dates = recentDates(days + 1).slice(1).filter((d) => isDueDay(d, weekends));
+  const { weekends, joined } = await memberCalendar(memberId);
+  const dates = recentDates(days + 1).slice(1).filter((d) => d >= joined && isDueDay(d, weekends));
   const from = recentDates(days + 1).slice(1).pop()!;
   const reqs = await memberRequirements(memberId);
   const { rows } = await pool.query(
@@ -188,6 +192,7 @@ export type EntryRow = {
   label: string;
   count: number;
   proof_url: string | null;
+  has_image: boolean;
   notes: string | null;
 };
 
@@ -196,7 +201,7 @@ export async function memberEntries(memberId: number, days: number): Promise<Ent
   const from = recentDates(days)[days - 1];
   const { rows } = await pool.query(
     `select e.id, to_char(e.work_date, 'YYYY-MM-DD') as work_date, wt.label,
-            e.count, e.proof_url, e.notes
+            e.count, e.proof_url, (e.proof_image is not null) as has_image, e.notes
        from entries e
        join work_types wt on wt.key = e.work_key
       where e.member_id = $1 and e.work_date >= $2::date

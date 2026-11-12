@@ -43,7 +43,7 @@ export default function PushButton() {
 
   return (
     <div style={{ margin: "8px 0" }}>
-      <button onClick={enable} style={{ padding: 8 }}>
+      <button onClick={enable} className="btn ghost">
         Turn on reminders
       </button>
       {msg && <p>{msg}</p>}

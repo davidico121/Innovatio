@@ -13,18 +13,21 @@ function ensureVapid() {
   vapidReady = true;
 }
 
-export async function sendPush(memberId: number, title: string, body: string, url = "/") {
+/** Returns how many of the member's devices the push reached. */
+export async function sendPush(memberId: number, title: string, body: string, url = "/"): Promise<number> {
   ensureVapid();
   const { rows } = await pool.query(
     `select id, endpoint, p256dh, auth from push_subscriptions where member_id = $1`,
     [memberId],
   );
+  let delivered = 0;
   for (const s of rows) {
     try {
       await webpush.sendNotification(
         { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
         JSON.stringify({ title, body, url }),
       );
+      delivered++;
     } catch (err) {
       // 404/410 means the device unsubscribed or reinstalled; drop the dead subscription.
       const code = (err as { statusCode?: number }).statusCode;
@@ -33,10 +36,11 @@ export async function sendPush(memberId: number, title: string, body: string, ur
       }
     }
   }
+  return delivered;
 }
 
 export async function sendEmail(to: string, subject: string, text: string) {
-  const res = await fetch("https://api.resend.com/emails", {
+  const res = await fetch(process.env.RESEND_API_URL ?? "https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,

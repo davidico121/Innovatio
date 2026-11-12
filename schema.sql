@@ -85,3 +85,30 @@ insert into ipa_tasks (ipa_id, work_key, daily_min, requires_proof)
 --   values ('Jane Doe', 'jane@example.com', (select id from ipas where name = 'Email outreach IPA'))
 --   returning id, token;
 -- Signed link to send them: https://YOUR_APP_URL/api/login?token=<token>
+
+-- v4: screenshot proof, personal todos and monthly goals.
+alter table entries add column if not exists proof_image bytea;
+alter table entries add column if not exists proof_image_type text;
+
+-- Private to the member. Admins never read these tables.
+create table if not exists todos (
+  id serial primary key,
+  member_id int not null references members(id) on delete cascade,
+  title text not null,
+  scope text not null check (scope in ('day', 'week')),
+  period_start date not null,           -- the day itself, or the Monday of that week
+  done_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists todos_member_period on todos(member_id, scope, period_start);
+
+create table if not exists goals (
+  id serial primary key,
+  member_id int not null references members(id) on delete cascade,
+  title text not null,
+  month date not null,                  -- first day of the month
+  target int not null check (target > 0),
+  progress int not null default 0 check (progress >= 0),
+  created_at timestamptz not null default now()
+);
+create index if not exists goals_member_month on goals(member_id, month);

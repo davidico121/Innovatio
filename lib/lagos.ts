@@ -27,3 +27,22 @@ export function isWeekend(ymd: string): boolean {
 export function isDueDay(ymd: string, countsWeekends: boolean): boolean {
   return countsWeekends || !isWeekend(ymd);
 }
+
+/** Monday of the week containing ymd. */
+export function weekStart(ymd: string): string {
+  const day = new Date(`${ymd}T00:00:00Z`).getUTCDay(); // 0 Sun .. 6 Sat
+  return shiftDate(ymd, -((day + 6) % 7));
+}
+
+export function monthStart(ymd: string): string {
+  return `${ymd.slice(0, 7)}-01`;
+}
+
+export function dayOfYear(ymd: string): number {
+  const d = new Date(`${ymd}T00:00:00Z`);
+  return Math.floor((d.getTime() - Date.UTC(d.getUTCFullYear(), 0, 0)) / 86400000);
+}
+
+export function weekdayShort(ymd: string): string {
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date(`${ymd}T00:00:00Z`).getUTCDay()];
+}

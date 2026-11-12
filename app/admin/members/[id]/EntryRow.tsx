@@ -9,6 +9,7 @@ type Entry = {
   label: string;
   count: number;
   proof_url: string | null;
+  has_image: boolean;
   notes: string | null;
 };
 
@@ -60,13 +61,18 @@ export default function EntryRow({ entry }: { entry: Entry }) {
         <td style={cell}>{entry.label}</td>
         <td style={cell}>{entry.count}</td>
         <td style={cell}>
-          {entry.proof_url ? (
-            <a href={entry.proof_url} target="_blank" rel="noreferrer">
-              proof
+          {entry.has_image && (
+            <a href={`/api/proof/${entry.id}`} target="_blank" rel="noreferrer">
+              screenshot
             </a>
-          ) : (
-            "none"
           )}
+          {entry.has_image && entry.proof_url && " | "}
+          {entry.proof_url && (
+            <a href={entry.proof_url} target="_blank" rel="noreferrer">
+              link
+            </a>
+          )}
+          {!entry.has_image && !entry.proof_url && "none"}
         </td>
         <td style={cell}>{entry.notes ?? ""}</td>
         <td style={cell}>
