@@ -10,6 +10,7 @@ import LogForm from "./LogForm";
 import PushButton from "./PushButton";
 import Toaster from "./Toaster";
 import { BrandBar } from "./ui/BrandBar";
+import { InstallBanner, InstallCard } from "./ui/InstallPrompt";
 import Todos from "./Todos";
 import Goals from "./Goals";
 
@@ -45,6 +46,7 @@ export default async function Home() {
   return (
     <main id="main" className="page dash-page stack">
       <Toaster />
+      <InstallBanner />
       <BrandBar>
         <Link href="/account" className="navlink">Account</Link>
       </BrandBar>
@@ -112,6 +114,8 @@ export default async function Home() {
         <div className="col">
           <Todos day={dayTodos} week={weekTodos} />
           <Goals goals={goalsRes.rows} monthLabel={monthLabel} />
+
+          <InstallCard />
 
           <section className="card">
             <h2>Reminders</h2>

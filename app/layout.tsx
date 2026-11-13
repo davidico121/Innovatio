@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Archivo_Black, Open_Sans, Roboto } from "next/font/google";
 import "./globals.css";
+import { InstallProvider } from "./ui/InstallProvider";
 
 // The design system's three voices: display (headlines, big numbers), sans (body), label (small caps text).
 const display = Archivo_Black({ weight: "400", subsets: ["latin"], variable: "--ff-display", display: "swap" });
@@ -26,8 +27,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${display.variable} ${sans.variable} ${label.variable}`}>
       <body>
+        {/* Chrome can send its install event before the app has finished loading, so catch it first and hand it over. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__bip=e;window.dispatchEvent(new Event('bip-ready'));});",
+          }}
+        />
         <a href="#main" className="skip">Skip to content</a>
-        {children}
+        <InstallProvider>{children}</InstallProvider>
         <script
           dangerouslySetInnerHTML={{
             __html:
