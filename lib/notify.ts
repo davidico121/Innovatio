@@ -39,14 +39,15 @@ export async function sendPush(memberId: number, title: string, body: string, ur
   return delivered;
 }
 
-export async function sendEmail(to: string, subject: string, text: string) {
+/** Sends one email. `html` is the branded version; `text` is always sent too, for clients that show only text. */
+export async function sendEmail(to: string, subject: string, text: string, html?: string) {
   const res = await fetch(process.env.RESEND_API_URL ?? "https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from: process.env.EMAIL_FROM, to, subject, text }),
+    body: JSON.stringify({ from: process.env.EMAIL_FROM, to, subject, text, ...(html ? { html } : {}) }),
   });
   if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);
 }

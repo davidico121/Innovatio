@@ -2,6 +2,7 @@ import { pool } from "./db";
 import { revokeSessions } from "./auth";
 import { generateTempPassword, hashPassword } from "./password";
 import { sendEmail } from "./notify";
+import { renderEmailHtml } from "./emailTemplate";
 
 export const TEMP_PASSWORD_DAYS = 7;
 
@@ -46,6 +47,21 @@ export async function sendInvite(memberId: number): Promise<{ ok: true } | { ok:
         "",
         "Tip: open the link on your phone and add it to your home screen (on iPhone: Share, then Add to Home Screen). Then turn on reminders so the app can cheer you on.",
       ].join("\n"),
+      renderEmailHtml(
+        {
+          preheader: "Your temporary password is inside. It takes a minute to set up.",
+          heading: "Welcome to the team",
+          intro: [`Hi ${first},`, "You have been added to the team tracker. Here is how to get started."],
+          steps: [`Open the sign-in page.`, `Sign in with your email (${m.email}) and the temporary password below.`, "Choose your own password."],
+          code: { label: "Your temporary password", value: temp },
+          outro: [
+            `The temporary password works once and expires in ${TEMP_PASSWORD_DAYS} days. If it expires, ask your manager to send a new one.`,
+            "Tip: open the link on your phone and add it to your home screen (on iPhone: Share, then Add to Home Screen). Then turn on reminders so the app can cheer you on.",
+          ],
+          button: app ? { label: "Open the sign-in page", url: `${app}/login` } : undefined,
+        },
+        app,
+      ),
     );
   } catch (err) {
     console.error(`invite email failed for member ${memberId}`, err);

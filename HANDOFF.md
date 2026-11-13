@@ -39,6 +39,7 @@ Stack: Next.js 15 App Router PWA, Postgres on Neon, `web-push` for notifications
 - All visual design lives in `app/globals.css`, in three layers: the Innovatio Team Design System tokens (copied by name and value from its `tokens.json`), semantic app tokens (surface, text, border, status), then components. Change a token and the whole app follows.
 - Fonts are Archivo Black (headlines, big numbers), Open Sans (body) and Roboto (small caps labels), loaded with `next/font` in `app/layout.tsx`.
 - The design system defines light only. The dark theme is derived and lives in the `prefers-color-scheme: dark` block. Status text colours (`--good-text`, `--bad-text`) and soft fills are derived too, because the design system's success and danger fills do not reach 4.5:1 as text.
+- Emails: every email is sent as branded HTML plus the original plain text. `lib/emailTemplate.ts` builds the HTML (logo, outlined card, yellow button, streak panel with week dots), and the plain-text bodies and subjects sit next to each message in `lib/invite.ts` and `app/api/cron/reminders/route.ts`. Email clients do not support CSS variables, so the template writes the design system values out. Clients that support dark mode get the dark colours and dark logo. The logo images are served from `APP_URL/brand/email-mark.png` and `email-mark-dark.png`. Everything put in the HTML goes through `esc()`.
 - Admin tables use `app/ui/Table.tsx`, which becomes a stack of cards below 760px. Give every `Td` a `label`.
 - The logo is the design system's clean vector redraw (Nov 2026): `public/brand/mark.svg` for light surfaces and `mark-dark.svg` for dark ones, switched with `prefers-color-scheme` in `app/ui/BrandBar.tsx`. The home screen icons are the same mark on paper. Never put the logo on yellow, the bulb disappears.
 
@@ -69,4 +70,3 @@ Gotchas: restart the server after changing `.env.local`. After deleting a route,
 - The real daily targets for the other IPAs, and their documents.
 - A streak freeze (one forgiven miss a month), only if people quit after a first miss.
 - Screenshots are stored in Postgres. Move them to file storage if the team grows past about 10 members.
-- Emails are plain text. Branded HTML versions would be a nice follow-up.

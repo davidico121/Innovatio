@@ -5,6 +5,7 @@ import { PROOF_RETENTION_DAYS, consistencyReport, isFlagged, isMemberDue } from 
 import { memberStats } from "@/lib/stats";
 import { sendEmail, sendPush } from "@/lib/notify";
 import { MILESTONES, milestoneLine, quoteFor } from "@/lib/copy";
+import { renderEmailHtml, type EmailDot } from "@/lib/emailTemplate";
 
 export const dynamic = "force-dynamic";
 // Sending to every member one by one can outlast the host default, so ask for the maximum.
@@ -24,7 +25,7 @@ export const maxDuration = 60;
  */
 const ADMIN_KEY = 0;
 
-type Msg = { title: string; body: string; email?: { subject: string; text: string }; emailAlways?: boolean };
+type Msg = { title: string; body: string; email?: { subject: string; text: string; html?: string }; emailAlways?: boolean };
 type Member = { id: number; name: string; email: string };
 
 export async function GET(req: NextRequest) {
@@ -60,7 +61,7 @@ export async function GET(req: NextRequest) {
         const msg = await build(m);
         if (!msg) continue;
         const delivered = await sendPush(m.id, msg.title, msg.body, "/");
-        if (msg.email && (msg.emailAlways || delivered === 0)) await sendEmail(m.email, msg.email.subject, msg.email.text);
+        if (msg.email && (msg.emailAlways || delivered === 0)) await sendEmail(m.email, msg.email.subject, msg.email.text, msg.email.html);
         await markSent(m.id, k);
         sent++;
       } catch (err) {
@@ -84,14 +85,43 @@ export async function GET(req: NextRequest) {
           title: milestone ? `${s.streak} day streak` : "Nice work yesterday",
           body: line,
           emailAlways: milestone,
-          email: { subject: `${s.streak} days in a row, ${first}`, text: `Hi ${first},\n\n${line}\n\nThat did not happen by accident. You kept showing up.\n\nKeep it going: ${app}` },
+          email: {
+            subject: `${s.streak} days in a row, ${first}`,
+            text: `Hi ${first},\n\n${line}\n\nThat did not happen by accident. You kept showing up.\n\nKeep it going: ${app}`,
+            html: renderEmailHtml(
+              {
+                preheader: line,
+                heading: milestone ? "A streak worth being proud of" : "Nice work yesterday",
+                intro: [`Hi ${first},`, line],
+                hero: { value: String(s.streak), label: s.streak === 1 ? "day in a row" : "days in a row" },
+                outro: ["That did not happen by accident. You kept showing up."],
+                button: app ? { label: "Keep it going", url: app } : undefined,
+              },
+              app,
+            ),
+          },
         };
       }
-      const todays = (await memberStats(m.id, today)).tasks.map((t) => `${t.label} ${t.daily_min}`).join(", ");
+      const todayTasks = (await memberStats(m.id, today)).tasks;
+      const todays = todayTasks.map((t) => `${t.label} ${t.daily_min}`).join(", ");
       return {
         title: "A fresh day",
         body: wasDue ? `Yesterday is done. Today is a clean page: ${todays}.` : `Today's targets: ${todays}.`,
-        email: { subject: "A fresh day", text: `Hi ${first},\n\nToday is a clean page. Targets: ${todays}.\n\nYour streak restarts the moment you finish them. Start here: ${app}` },
+        email: {
+          subject: "A fresh day",
+          text: `Hi ${first},\n\nToday is a clean page. Targets: ${todays}.\n\nYour streak restarts the moment you finish them. Start here: ${app}`,
+          html: renderEmailHtml(
+            {
+              preheader: `Today is a clean page. Targets: ${todays}.`,
+              heading: "A fresh day",
+              intro: [`Hi ${first},`, "Today is a clean page."],
+              sections: [{ title: "Today's targets", rows: todayTasks.map((t) => ({ label: t.label, value: String(t.daily_min) })) }],
+              outro: ["Your streak restarts the moment you finish them."],
+              button: app ? { label: "Start here", url: app } : undefined,
+            },
+            app,
+          ),
+        },
       };
     });
   }
@@ -110,7 +140,30 @@ export async function GET(req: NextRequest) {
           : s.todayPct > 0
             ? `You have started, which is the hard part. ${left}.`
             : `${left}. Start with the first one and the rest follows.`;
-      return { title, body, email: { subject: title, text: `Hi ${first},\n\n${body}\n\nLog your work here: ${app}` } };
+      const lead =
+        s.todayPct >= 50
+          ? `You are ${s.todayPct}% there.`
+          : s.todayPct > 0
+            ? "You have started, which is the hard part."
+            : "Start with the first one and the rest follows.";
+      return {
+        title,
+        body,
+        email: {
+          subject: title,
+          text: `Hi ${first},\n\n${body}\n\nLog your work here: ${app}`,
+          html: renderEmailHtml(
+            {
+              preheader: body,
+              heading: title,
+              intro: [`Hi ${first},`, lead],
+              sections: [{ title: "Still open today", rows: open.map((t) => ({ label: t.label, value: `${t.daily_min - t.done} to go` })) }],
+              button: app ? { label: "Log your work", url: app } : undefined,
+            },
+            app,
+          ),
+        },
+      };
     });
   }
 
@@ -147,7 +200,27 @@ export async function GET(req: NextRequest) {
       const lines = totals.rows.map((r: { label: string; n: number }) => `- ${r.label}: ${r.n}`).join("\n");
       const verdict = s.weekMet === s.weekDue ? "A perfect week. Every working day done." : `${s.weekMet} of ${s.weekDue} working days done. Every one of them counted.`;
       const text = `Hi ${first},\n\nYour week in review.\n\n${verdict}\n\n${lines || "Nothing logged this week. A new week starts today."}\n\nCurrent streak: ${s.streak} days. Best: ${s.bestStreak}.\n\nSet this week's to-dos and see your goals: ${app}`;
-      return { title: "Your week in review", body: verdict, emailAlways: true, email: { subject: "Your week in review", text } };
+      // On the recap the week is over, so a day that is still "today" in the stats counts as an open day.
+      const dots: EmailDot[] = s.week.map((d) => ({ label: d.label, state: d.state === "today" ? "missed" : d.state }));
+      const html = renderEmailHtml(
+        {
+          preheader: verdict,
+          heading: "Your week in review",
+          intro: [`Hi ${first},`, verdict],
+          hero: { value: `${s.weekMet}/${s.weekDue}`, label: "working days done", dots, note: `Current streak: ${s.streak} days. Best: ${s.bestStreak}.` },
+          sections: [
+            {
+              title: "What you logged",
+              rows: totals.rows.map((r: { label: string; n: number }) => ({ label: r.label, value: r.n.toLocaleString("en-US") })),
+              empty: "Nothing logged this week. A new week starts today.",
+            },
+          ],
+          outro: ["Set this week's to-dos and see your goals."],
+          button: app ? { label: "Open the app", url: app } : undefined,
+        },
+        app,
+      );
+      return { title: "Your week in review", body: verdict, emailAlways: true, email: { subject: "Your week in review", text, html } };
     });
   }
 
@@ -159,7 +232,31 @@ export async function GET(req: NextRequest) {
     const g = strong.map((r) => `- ${r.name}: ${r.metDays}/${r.days} days met, ${r.streak} day streak`).join("\n");
     const text = `Last 7 completed days.\n\nNeeds a nudge (${flagged.length}):\n${f || "- nobody"}\n\nGoing well (${strong.length}):\n${g || "- nobody yet"}\n\nAdmin: ${app}/admin`;
     try {
-      await sendEmail(process.env.ADMIN_EMAIL, `Team tracker: ${flagged.length} to nudge, ${strong.length} doing well`, text);
+      const html = renderEmailHtml(
+        {
+          preheader: `${flagged.length} to nudge, ${strong.length} doing well over the last 7 completed days.`,
+          heading: "Your team this week",
+          intro: ["Last 7 completed days."],
+          sections: [
+            {
+              stacked: true,
+              title: `Needs a nudge (${flagged.length})`,
+              rows: flagged.map((r) => ({ label: r.name, value: `${r.metDays}/${r.days} days met, last log ${r.lastLogged ?? "never"}` })),
+              empty: "Nobody.",
+            },
+            {
+              stacked: true,
+              title: `Going well (${strong.length})`,
+              rows: strong.map((r) => ({ label: r.name, value: `${r.metDays}/${r.days} days met, ${r.streak} day streak` })),
+              empty: "Nobody yet.",
+            },
+          ],
+          button: app ? { label: "Open admin", url: `${app}/admin` } : undefined,
+          footer: "Sent to the admin of Innovatio Team Tracker.",
+        },
+        app,
+      );
+      await sendEmail(process.env.ADMIN_EMAIL, `Team tracker: ${flagged.length} to nudge, ${strong.length} doing well`, text, html);
       await markSent(ADMIN_KEY, "digest");
       sent++;
     } catch (err) {
