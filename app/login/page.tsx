@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { currentSession } from "@/lib/auth";
 import { BrandHero } from "../ui/BrandBar";
+import PasswordField from "../ui/PasswordField";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +20,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           Email
           <input name="email" type="email" required autoComplete="username" className="field" />
         </label>
-        <label className="label">
-          Password
-          <input name="password" type="password" required autoComplete="current-password" className="field" />
-        </label>
+        <PasswordField name="password" label="Password" autoComplete="current-password" required />
         <button type="submit" className="btn">Sign in</button>
         {error && <p className="err" role="alert">{error}</p>}
       </form>

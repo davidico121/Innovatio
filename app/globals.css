@@ -395,6 +395,19 @@ input[type="checkbox"]:checked {
   background-repeat: no-repeat; background-position: center; background-size: 80%;
 }
 .check { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; font-weight: 600; cursor: pointer; }
+/* Password field with a show and hide button (app/ui/PasswordField.tsx) */
+.label-group { display: grid; gap: 6px; }
+.pw { position: relative; }
+.pw .field { padding-right: 52px; }
+.pw input::-ms-reveal, .pw input::-ms-clear { display: none; }
+.pw-toggle {
+  position: absolute; top: 50%; right: 4px; transform: translateY(-50%);
+  display: grid; place-items: center; width: 44px; height: 44px; padding: 0; cursor: pointer;
+  color: var(--text-muted); background: transparent; border: 2px solid transparent; border-radius: var(--radius-sm);
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+@media (hover: hover) { .pw-toggle:hover { background: var(--brand-soft); color: var(--ink-900); } }
+.pw-toggle[aria-pressed="true"] { background: var(--brand-primary); color: var(--text-on-brand); border-color: var(--border-on-brand); }
 .formrow { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: stretch; }
 .formrow > .field { flex: 1 1 200px; width: auto; }
 .formrow > .btn { flex: 0 0 auto; }

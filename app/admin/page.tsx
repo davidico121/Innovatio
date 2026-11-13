@@ -4,6 +4,7 @@ import { consistencyReport, isFlagged } from "@/lib/status";
 import { todayLagos } from "@/lib/lagos";
 import { pool } from "@/lib/db";
 import { AdminBar, BrandHero } from "../ui/BrandBar";
+import PasswordField from "../ui/PasswordField";
 import { Table, Td, Tr } from "../ui/Table";
 
 export const dynamic = "force-dynamic";
@@ -25,10 +26,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
           <p className="muted">Enter the admin token to see how the team is doing.</p>
         </BrandHero>
         <form action="/api/admin/login" method="post" className="card stack tight">
-          <label className="label">
-            Admin token
-            <input name="token" type="password" autoComplete="current-password" className="field" />
-          </label>
+          <PasswordField name="token" label="Admin token" autoComplete="current-password" />
           <button type="submit" className="btn">Enter</button>
         </form>
       </main>
