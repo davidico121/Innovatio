@@ -296,13 +296,6 @@ a {
 .navlink[aria-current="page"] { background: var(--brand-primary); color: var(--text-on-brand); border-color: var(--border-on-brand); }
 @media (hover: hover) { a.navlink:hover:not([aria-current]) { background: var(--brand-soft); } }
 .intro { display: grid; gap: var(--space-3); justify-items: start; margin-bottom: var(--space-5); }
-.deco-asterisk { display: none; }
-@media (min-width: 720px) {
-  .deco-asterisk {
-    display: block; position: fixed; top: 140px; right: 0; width: 180px; height: 250px; z-index: -1; pointer-events: none;
-    background: url("/brand/asterisk-corner.png") no-repeat right top / contain;
-  }
-}
 
 /* ---------- Cards and notes ---------- */
 .card {

@@ -10,7 +10,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   return (
     <main id="main" className="page narrow stack">
-      <div className="deco-asterisk" aria-hidden />
       <BrandHero>
         <h1>Welcome back</h1>
         <p className="muted">Sign in to log your work and see how far you have come.</p>

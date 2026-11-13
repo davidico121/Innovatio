@@ -12,7 +12,6 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
 
   return (
     <main id="main" className="page narrow stack">
-      <div className="deco-asterisk" aria-hidden />
       <BrandHero>
         <h1>Welcome, {s.name.split(" ")[0]}</h1>
         <p className="muted">One last step. Choose your own password, and this account is yours.</p>

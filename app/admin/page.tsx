@@ -20,7 +20,6 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   if (!(await isAdmin())) {
     return (
       <main id="main" className="page narrow stack">
-        <div className="deco-asterisk" aria-hidden />
         <BrandHero>
           <h1>Admin</h1>
           <p className="muted">Enter the admin token to see how the team is doing.</p>
