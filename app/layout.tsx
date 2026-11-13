@@ -11,7 +11,7 @@ const label = Roboto({ weight: ["500", "700"], subsets: ["latin"], variable: "--
 export const metadata: Metadata = {
   title: "Innovatio Team Tracker",
   manifest: "/manifest.json",
-  icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
+  icons: { icon: "/icon-192.png?v=2", apple: "/apple-touch-icon.png?v=2" },
   appleWebApp: { capable: true, title: "Innovatio Team Tracker", statusBarStyle: "default" },
 };
 
