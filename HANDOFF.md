@@ -40,7 +40,7 @@ Stack: Next.js 15 App Router PWA, Postgres on Neon, `web-push` for notifications
 - Fonts are Archivo Black (headlines, big numbers), Open Sans (body) and Roboto (small caps labels), loaded with `next/font` in `app/layout.tsx`.
 - The design system defines light only. The dark theme is derived and lives in the `prefers-color-scheme: dark` block. Status text colours (`--good-text`, `--bad-text`) and soft fills are derived too, because the design system's success and danger fills do not reach 4.5:1 as text.
 - Admin tables use `app/ui/Table.tsx`, which becomes a stack of cards below 760px. Give every `Td` a `label`.
-- Logo files in `public/brand/` and the home screen icons come from the design system's logo, which still carries a faint Canva watermark. Replace them when a clean vector logo exists.
+- The logo is the design system's clean vector redraw (Nov 2026): `public/brand/mark.svg` for light surfaces and `mark-dark.svg` for dark ones, switched with `prefers-color-scheme` in `app/ui/BrandBar.tsx`. The home screen icons are the same mark on paper. Never put the logo on yellow, the bulb disappears.
 
 ## Decisions worth knowing
 

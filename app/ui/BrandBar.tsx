@@ -1,13 +1,23 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+/** The clean vector bulb. The dark version is for dark surfaces, as the design system asks. */
+function Mark({ width, height, className }: { width: number; height: number; className: string }) {
+  return (
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcSet="/brand/mark-dark.svg" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/brand/mark.svg" alt="" width={width} height={height} className={className} />
+    </picture>
+  );
+}
+
 /** The logo mark and wordmark. Pass links for the right-hand side, such as the account link. */
 export function BrandBar({ sub = "Team Tracker", home = "/", children }: { sub?: string; home?: string; children?: ReactNode }) {
   return (
     <div className="brandbar">
       <Link href={home} className="brandlink" aria-label="Innovatio Team Tracker, home">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/mark.png" alt="" width={44} height={47} className="mark" />
+        <Mark width={44} height={50} className="mark" />
         <span className="wordmark">
           <b>Innovatio</b>
           <span>{sub}</span>
@@ -22,8 +32,7 @@ export function BrandBar({ sub = "Team Tracker", home = "/", children }: { sub?:
 export function BrandHero({ children }: { children: ReactNode }) {
   return (
     <header className="intro">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/brand/mark.png" alt="" width={72} height={77} className="mark big" />
+      <Mark width={72} height={81} className="mark big" />
       <p className="eyebrow muted">Innovatio Team Tracker</p>
       {children}
     </header>

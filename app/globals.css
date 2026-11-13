@@ -29,6 +29,9 @@
   --paper-200: #e2e2e2;
   --success-500: #2e9e5b;
   --danger-500: #d6402b;
+  --info-500: #2f6fde;
+  --text-inverse: var(--paper-0);
+  --surface-inverse: var(--ink-800);
 
   /* Type families (loaded in app/layout.tsx with next/font) */
   --font-display: var(--ff-display), "Arial Black", sans-serif;
@@ -38,8 +41,19 @@
   --lh-snug: 1.15;
   --lh-body: 1.5;
   --ls-display: -0.02em;
-  --ls-label: 0.14em;
+  --ls-name: 0.04em;
+  --ls-date: 0.16em;
   --ls-wordmark: 0.2em;
+  --ls-label: 0.14em; /* app: the 11px labels in the design system's Input and Badge */
+  --fs-hero: 120px;
+  --fs-display: 88px;
+  --fs-h1: 56px;
+  --fs-h2: 40px;
+  --fs-h3: 28px;
+  --fs-lg: 20px;
+  --fs-body: 16px;
+  --fs-sm: 14px;
+  --fs-xs: 12px;
 
   /* Spacing */
   --space-1: 4px;
@@ -50,18 +64,24 @@
   --space-6: 32px;
   --space-7: 48px;
   --space-8: 64px;
+  --space-9: 96px;
 
   /* Radius */
   --radius-sm: 8px;
   --radius-md: 16px;
   --radius-lg: 24px;
+  --radius-pill: 40px;
   --radius-full: 999px;
 
   /* Borders, shadow and motion */
-  --border-thick: 3px;
-  --border-control-w: 2px;
+  --border-frame: 6px;
   --border-thin: 1.5px;
+  --border-thick: 3px; /* app: card outline, as the design system's Card */
+  --border-control-w: 2px; /* app: buttons and fields, as the design system's Button and Input */
+  --shadow-none: none;
   --shadow-card: 0 2px 0 #000000;
+  --shadow-lift: 0 6px 18px rgba(0, 0, 0, 0.1);
+  --shadow-hard: 6px 6px 0 #000000; /* flyers only, not used in the app */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --dur-fast: 120ms;
   --dur-base: 200ms;
@@ -75,6 +95,7 @@
   --surface-card: var(--paper-0);
   --surface-sunken: var(--paper-100);
   --surface-brand: var(--yellow-500);
+  --surface-brand-soft: var(--yellow-300);
   --surface-note: var(--yellow-50);
   --texture-paper: url("/brand/paper.png");
 
@@ -94,9 +115,9 @@
   --border-on-brand: var(--ink-900); /* outlines on yellow fills, both themes */
   --border-control: var(--ink-500); /* field edges, 3:1 or better on every surface */
   --border-subtle: var(--paper-200);
+  --border-brand: var(--yellow-500);
   --focus: var(--ink-900);
   --row-hover: var(--yellow-50);
-  --logo-plate: transparent;
   --caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1.5l6 6 6-6' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 
   /* Status. The design system gives the fills; the text and soft tones are derived. */
@@ -150,7 +171,6 @@
     --border-subtle: #303030;
     --focus: var(--yellow-500);
     --row-hover: #201b0d;
-    --logo-plate: var(--paper-50);
     --caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1.5l6 6 6-6' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 
     --good-soft: #15301f;
@@ -262,11 +282,8 @@ a {
 .brandbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); margin-bottom: var(--space-5); }
 .brandlink { display: inline-flex; align-items: center; gap: var(--space-3); text-decoration: none; color: var(--text-strong); border-radius: var(--radius-sm); }
 @media (hover: hover) { a.brandlink:hover { background: transparent; } }
-.mark {
-  display: block; width: 44px; height: auto; flex: none;
-  background: var(--logo-plate); border-radius: var(--radius-sm); padding: 3px;
-}
-.mark.big { width: 72px; padding: 5px; border-radius: var(--radius-md); }
+.mark { display: block; width: 44px; height: auto; flex: none; }
+.mark.big { width: 72px; }
 .wordmark { display: grid; line-height: 1.1; }
 .wordmark b { font-family: var(--font-sans); font-weight: 800; font-size: 0.9rem; letter-spacing: var(--ls-wordmark); text-transform: uppercase; color: var(--text-strong); }
 .wordmark span { font-family: var(--font-label); font-weight: 700; font-size: 0.75rem; letter-spacing: var(--ls-label); text-transform: uppercase; color: var(--text-muted); }
