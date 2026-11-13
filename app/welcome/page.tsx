@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { currentSession } from "@/lib/auth";
+import { BrandHero } from "../ui/BrandBar";
 
 export const dynamic = "force-dynamic";
 
@@ -10,22 +11,23 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
   const { error } = await searchParams;
 
   return (
-    <main className="app stack" style={{ maxWidth: 420, margin: "40px auto 0" }}>
-      <header>
+    <main id="main" className="page narrow stack">
+      <div className="deco-asterisk" aria-hidden />
+      <BrandHero>
         <h1>Welcome, {s.name.split(" ")[0]}</h1>
         <p className="muted">One last step. Choose your own password, and this account is yours.</p>
-      </header>
-      <form action="/api/auth/setup" method="post" className="card stack" style={{ gap: 12 }}>
+      </BrandHero>
+      <form action="/api/auth/setup" method="post" className="card stack tight">
         <p className="muted">You will sign in with {s.email} and this password.</p>
-        <label>
+        <label className="label">
           New password
-          <input name="password" type="password" required minLength={10} autoComplete="new-password" className="field" style={{ marginTop: 6 }} />
+          <input name="password" type="password" required minLength={10} autoComplete="new-password" className="field" />
         </label>
-        <label>
+        <label className="label">
           Type it again
-          <input name="confirm" type="password" required minLength={10} autoComplete="new-password" className="field" style={{ marginTop: 6 }} />
+          <input name="confirm" type="password" required minLength={10} autoComplete="new-password" className="field" />
         </label>
-        <p className="muted" style={{ fontSize: "0.85rem" }}>At least 10 characters. A few random words is a good way to make one you can remember.</p>
+        <p className="muted small">At least 10 characters. A few random words is a good way to make one you can remember.</p>
         <button type="submit" className="btn">Save and continue</button>
         {error && <p className="err" role="alert">{error}</p>}
       </form>

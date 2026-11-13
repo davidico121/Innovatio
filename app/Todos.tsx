@@ -37,7 +37,8 @@ function List({ title, scope, todos, hint }: { title: string; scope: "day" | "we
         <h2 style={{ margin: 0 }}>{title}</h2>
         {todos.length > 0 && <span className={`pill ${done === todos.length ? "done" : ""}`}>{done}/{todos.length}</span>}
       </div>
-      <p className="muted" style={{ margin: "4px 0 8px" }}>{hint}</p>
+      <p className="muted mt-2">{hint}</p>
+      <div className="mt-3">
       {todos.map((t) => (
         <div key={t.id} className={`todo ${t.done ? "done" : ""}`}>
           <input type="checkbox" checked={t.done} onChange={() => toggle(t)} aria-label={t.title} />
@@ -45,20 +46,21 @@ function List({ title, scope, todos, hint }: { title: string; scope: "day" | "we
           <button className="link" onClick={() => remove(t)} aria-label={`Delete ${t.title}`}>Remove</button>
         </div>
       ))}
-      <form onSubmit={add} className="row" style={{ marginTop: 8 }}>
+      </div>
+      <form onSubmit={add} className="todo-add">
         <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Add something" maxLength={140} className="field" aria-label={`Add to ${title}`} />
-        <button className="btn ghost small" type="submit" disabled={!text.trim()}>Add</button>
+        <button className="btn secondary small" type="submit" disabled={!text.trim()}>Add</button>
       </form>
-      {error && <p className="err">{error}</p>}
+      {error && <p className="err mt-3" role="alert">{error}</p>}
     </div>
   );
 }
 
 export default function Todos({ day, week }: { day: Todo[]; week: Todo[] }) {
   return (
-    <div className="stack">
+    <>
       <section className="card"><List title="My day" scope="day" todos={day} hint="Your own list for today. Only you can see it." /></section>
       <section className="card"><List title="My week" scope="week" todos={week} hint="What would make this week a good one?" /></section>
-    </div>
+    </>
   );
 }

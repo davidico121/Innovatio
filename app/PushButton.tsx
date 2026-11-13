@@ -42,11 +42,11 @@ export default function PushButton() {
   }
 
   return (
-    <div style={{ margin: "8px 0" }}>
-      <button onClick={enable} className="btn ghost">
+    <div className="stack tight mt-3">
+      <button onClick={enable} className="btn secondary">
         Turn on reminders
       </button>
-      {msg && <p>{msg}</p>}
+      {msg && <p className="note" role="status">{msg}</p>}
     </div>
   );
 }

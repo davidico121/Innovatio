@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 import { pool } from "@/lib/db";
-import { table, th, td, field } from "@/lib/ui";
+import { AdminBar } from "../../../ui/BrandBar";
+import { Table, Td, Tr } from "../../../ui/Table";
 
 export const dynamic = "force-dynamic";
 
@@ -37,78 +38,83 @@ export default async function IpaPage({
   const available = types.rows.filter((t) => !assigned.has(t.key));
 
   return (
-    <main>
-      <p><Link href="/admin/ipas">&larr; All IPAs</Link></p>
-      <h1>{ipa.name}</h1>
-      {ipa.description && <p>{ipa.description}</p>}
-      <form action={`/api/admin/ipas/${ipa.id}/settings`} method="post" style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
-        <label><input type="checkbox" name="counts_weekends" defaultChecked={ipa.counts_weekends} /> Targets apply on weekends too</label>
-        <button type="submit">Save</button>
-      </form>
-      <p>Members on this IPA: {members.rows.length ? members.rows.map((m) => m.name).join(", ") : "none"}</p>
-      {error && <p style={{ color: "#b00020" }}>{error}</p>}
+    <main id="main" className="page wide stack">
+      <AdminBar current="ipas" />
+      <header>
+        <p className="mb-3"><Link href="/admin/ipas">&larr; All IPAs</Link></p>
+        <h1>{ipa.name}</h1>
+        {ipa.description && <p className="muted mt-2">{ipa.description}</p>}
+      </header>
 
-      <h2>Targets</h2>
-      <table style={table}>
-        <thead>
-          <tr>
-            {["Work type", "Daily minimum", "Proof link", ""].map((h) => (
-              <th key={h} style={th}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
+      <section className="card">
+        <form action={`/api/admin/ipas/${ipa.id}/settings`} method="post" className="formrow" style={{ alignItems: "center" }}>
+          <label className="check"><input type="checkbox" name="counts_weekends" defaultChecked={ipa.counts_weekends} /> Targets apply on weekends too</label>
+          <button type="submit" className="btn secondary small">Save</button>
+        </form>
+        <p className="muted mt-3">Members on this IPA: {members.rows.length ? members.rows.map((m) => m.name).join(", ") : "none"}</p>
+        {error && <p className="err mt-3" role="alert">{error}</p>}
+      </section>
+
+      <section>
+        <h2>Targets</h2>
+        <Table head={["Work type", "Daily minimum", "Proof link", ""]}>
           {tasks.rows.map((t) => (
-            <tr key={t.work_key}>
-              <td style={td}>{t.label}</td>
-              <td style={td}>{t.daily_min}</td>
-              <td style={td}>{t.requires_proof ? "required" : "optional"}</td>
-              <td style={td}>
+            <Tr key={t.work_key}>
+              <Td className="cell-name">{t.label}</Td>
+              <Td label="Daily minimum" className="num">{t.daily_min}</Td>
+              <Td label="Proof link">{t.requires_proof ? "required" : "optional"}</Td>
+              <Td className="actions">
                 <form action={`/api/admin/ipas/${ipa.id}/tasks/delete`} method="post">
                   <input type="hidden" name="work_key" value={t.work_key} />
-                  <button type="submit">Remove</button>
+                  <button type="submit" className="btn secondary small" aria-label={`Remove ${t.label}`}>Remove</button>
                 </form>
-              </td>
-            </tr>
+              </Td>
+            </Tr>
           ))}
           {tasks.rows.length === 0 && (
-            <tr><td style={td} colSpan={4}>No targets yet.</td></tr>
+            <Tr><Td className="cell-full" colSpan={4}>No targets yet.</Td></Tr>
           )}
-        </tbody>
-      </table>
+        </Table>
+      </section>
 
-      <h3>Add or update a target</h3>
-      <form action={`/api/admin/ipas/${ipa.id}/tasks`} method="post" style={{ display: "grid", gap: 8, maxWidth: 480 }}>
-        <select name="work_key" required style={field} defaultValue="">
-          <option value="" disabled>Choose a work type</option>
-          {types.rows.map((t) => (
-            <option key={t.key} value={t.key}>
-              {t.label}{assigned.has(t.key) ? " (update)" : ""}
-            </option>
-          ))}
-          <option value="__new__">New work type...</option>
-        </select>
-        <input name="new_label" placeholder="New work type name (only if New)" style={field} />
-        <input name="new_key" placeholder="New key, e.g. social_posts (only if New)" style={field} />
-        <input name="daily_min" type="number" min={0} required placeholder="Daily minimum, e.g. 500" style={field} />
-        <label><input type="checkbox" name="requires_proof" defaultChecked /> Proof link required</label>
-        <button type="submit" style={field}>Save target</button>
-      </form>
-      {available.length === 0 && <p>Every work type is already on this IPA. Add a new one above to add more.</p>}
+      <div className="dash">
+        <section className="card">
+          <h2>Add or update a target</h2>
+          <form action={`/api/admin/ipas/${ipa.id}/tasks`} method="post" className="formgrid">
+            <select name="work_key" required className="field" defaultValue="" aria-label="Work type">
+              <option value="" disabled>Choose a work type</option>
+              {types.rows.map((t) => (
+                <option key={t.key} value={t.key}>
+                  {t.label}{assigned.has(t.key) ? " (update)" : ""}
+                </option>
+              ))}
+              <option value="__new__">New work type...</option>
+            </select>
+            <input name="new_label" placeholder="New work type name (only if New)" className="field" aria-label="New work type name" />
+            <input name="new_key" placeholder="New key, e.g. social_posts (only if New)" className="field" aria-label="New work type key" />
+            <input name="daily_min" type="number" min={0} required placeholder="Daily minimum, e.g. 500" className="field" aria-label="Daily minimum" />
+            <label className="check"><input type="checkbox" name="requires_proof" defaultChecked /> Proof link required</label>
+            <button type="submit" className="btn">Save target</button>
+          </form>
+          {available.length === 0 && <p className="muted mt-3">Every work type is already on this IPA. Add a new one above to add more.</p>}
+        </section>
 
-      <h2>Document</h2>
-      {ipa.document_name ? (
-        <p>
-          Current: <a href={`/api/admin/ipas/${ipa.id}/document`}>{ipa.document_name}</a>
-        </p>
-      ) : (
-        <p>No document uploaded.</p>
-      )}
-      <form action={`/api/admin/ipas/${ipa.id}/document`} method="post" encType="multipart/form-data" style={{ display: "grid", gap: 8, maxWidth: 480 }}>
-        <input name="file" type="file" accept=".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg" required />
-        <button type="submit" style={field}>Upload document</button>
-      </form>
-      <p>Up to 4 MB. Uploading replaces the current document.</p>
+        <section className="card">
+          <h2>Document</h2>
+          {ipa.document_name ? (
+            <p>
+              Current: <a href={`/api/admin/ipas/${ipa.id}/document`}>{ipa.document_name}</a>
+            </p>
+          ) : (
+            <p className="muted">No document uploaded.</p>
+          )}
+          <form action={`/api/admin/ipas/${ipa.id}/document`} method="post" encType="multipart/form-data" className="formgrid mt-3">
+            <input name="file" type="file" accept=".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg" required className="field" aria-label="Document file" />
+            <button type="submit" className="btn">Upload document</button>
+          </form>
+          <p className="muted small mt-3">Up to 4 MB. Uploading replaces the current document.</p>
+        </section>
+      </div>
     </main>
   );
 }

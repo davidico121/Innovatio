@@ -34,6 +34,14 @@ Stack: Next.js 15 App Router PWA, Postgres on Neon, `web-push` for notifications
 - `app/globals.css`: the member-facing styles. The admin pages mostly use inline styles from `lib/ui.ts`.
 - Member screens: `app/login`, `app/welcome`, `app/page.tsx`, `app/account`. Admin: `app/admin/...`.
 
+## Design
+
+- All visual design lives in `app/globals.css`, in three layers: the Innovatio Team Design System tokens (copied by name and value from its `tokens.json`), semantic app tokens (surface, text, border, status), then components. Change a token and the whole app follows.
+- Fonts are Archivo Black (headlines, big numbers), Open Sans (body) and Roboto (small caps labels), loaded with `next/font` in `app/layout.tsx`.
+- The design system defines light only. The dark theme is derived and lives in the `prefers-color-scheme: dark` block. Status text colours (`--good-text`, `--bad-text`) and soft fills are derived too, because the design system's success and danger fills do not reach 4.5:1 as text.
+- Admin tables use `app/ui/Table.tsx`, which becomes a stack of cards below 760px. Give every `Td` a `label`.
+- Logo files in `public/brand/` and the home screen icons come from the design system's logo, which still carries a faint Canva watermark. Replace them when a clean vector logo exists.
+
 ## Decisions worth knowing
 
 - **Sign-in**: email and password. Adding a member emails a one-time temporary password (valid 7 days). They must choose their own password before anything else works. Sessions last 180 days and are stored hashed. After 8 wrong tries an email is locked out for 15 minutes. A forgotten password is handled by the admin pressing "Send a new invite", which also signs the member out everywhere. The old magic-link sign-in was removed on purpose.

@@ -2,7 +2,7 @@ self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
 
 self.addEventListener("push", (event) => {
-  const data = event.data ? event.data.json() : { title: "Team Tracker", body: "" };
+  const data = event.data ? event.data.json() : { title: "Innovatio Team Tracker", body: "" };
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,

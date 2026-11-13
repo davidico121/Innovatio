@@ -51,7 +51,7 @@ export default function LogForm({ work, today, yesterday }: { work: Work[]; toda
   if (work.length === 0) return <p className="muted">You have no targets yet. Your manager will assign them.</p>;
 
   return (
-    <form onSubmit={submit} className="stack" style={{ gap: 10 }}>
+    <form onSubmit={submit} className="stack tight">
       <select name="work_key" value={selected} onChange={(e) => setSelected(e.target.value)} className="field" aria-label="Work type">
         {work.map((w) => (
           <option key={w.key} value={w.key}>{w.label}</option>
@@ -64,14 +64,14 @@ export default function LogForm({ work, today, yesterday }: { work: Work[]; toda
           <option value={yesterday}>Yesterday</option>
         </select>
       </div>
-      <label className="muted">
+      <label className="label">
         Proof {needsProof ? "(a screenshot or a link)" : "(optional)"}
-        <input name="proof_image" type="file" accept="image/png,image/jpeg,image/webp" className="field" style={{ marginTop: 6 }} />
+        <input name="proof_image" type="file" accept="image/png,image/jpeg,image/webp" className="field" />
       </label>
       <input name="proof_url" type="url" placeholder="Or paste a link, https://" className="field" aria-label="Proof link" />
       <input name="notes" maxLength={500} placeholder="Notes (optional)" className="field" aria-label="Notes" />
       <button type="submit" disabled={busy} className="btn">{busy ? "Saving..." : "Log it"}</button>
-      {status && <p className={status.startsWith("Logged") ? "muted" : "err"}>{status}</p>}
+      {status && <p className={status.startsWith("Logged") ? "muted" : "err"} role={status.startsWith("Logged") ? "status" : "alert"}>{status}</p>}
     </form>
   );
 }

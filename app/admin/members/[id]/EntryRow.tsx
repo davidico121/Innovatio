@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Td, Tr } from "../../../ui/Table";
 
 type Entry = {
   id: number;
@@ -13,9 +14,6 @@ type Entry = {
   proof_purged: boolean;
   notes: string | null;
 };
-
-const cell = { padding: 6, borderBottom: "1px solid #eee", verticalAlign: "top" as const };
-const input = { padding: 6, width: "100%", boxSizing: "border-box" as const };
 
 export default function EntryRow({ entry }: { entry: Entry }) {
   const router = useRouter();
@@ -57,52 +55,54 @@ export default function EntryRow({ entry }: { entry: Entry }) {
 
   if (!editing) {
     return (
-      <tr>
-        <td style={cell}>{entry.work_date}</td>
-        <td style={cell}>{entry.label}</td>
-        <td style={cell}>{entry.count}</td>
-        <td style={cell}>
-          {entry.has_image && (
-            <a href={`/api/proof/${entry.id}`} target="_blank" rel="noreferrer">
-              screenshot
-            </a>
-          )}
-          {entry.has_image && entry.proof_url && " | "}
-          {entry.proof_url && (
-            <a href={entry.proof_url} target="_blank" rel="noreferrer">
-              link
-            </a>
-          )}
-          {!entry.has_image && !entry.proof_url && (entry.proof_purged ? "screenshot removed after 60 days" : "none")}
-        </td>
-        <td style={cell}>{entry.notes ?? ""}</td>
-        <td style={cell}>
-          <button onClick={() => setEditing(true)} disabled={busy}>Edit</button>{" "}
-          <button onClick={remove} disabled={busy}>Delete</button>
-          {error && <p style={{ color: "#b00020" }}>{error}</p>}
-        </td>
-      </tr>
+      <Tr>
+        <Td label="Date" className="num">{entry.work_date}</Td>
+        <Td label="Work" className="strong">{entry.label}</Td>
+        <Td label="Count" className="num">{entry.count}</Td>
+        <Td label="Proof">
+          <span>
+            {entry.has_image && (
+              <a href={`/api/proof/${entry.id}`} target="_blank" rel="noreferrer">
+                screenshot
+              </a>
+            )}
+            {entry.has_image && entry.proof_url && " | "}
+            {entry.proof_url && (
+              <a href={entry.proof_url} target="_blank" rel="noreferrer">
+                link
+              </a>
+            )}
+            {!entry.has_image && !entry.proof_url && (entry.proof_purged ? "screenshot removed after 60 days" : "none")}
+          </span>
+        </Td>
+        <Td label="Notes">{entry.notes ?? ""}</Td>
+        <Td className="actions">
+          <button className="btn secondary small" onClick={() => setEditing(true)} disabled={busy}>Edit</button>
+          <button className="btn secondary small" onClick={remove} disabled={busy}>Delete</button>
+          {error && <p className="err" role="alert">{error}</p>}
+        </Td>
+      </Tr>
     );
   }
 
   return (
-    <tr>
-      <td style={cell}>{entry.work_date}</td>
-      <td style={cell}>{entry.label}</td>
-      <td style={cell}>
-        <input type="number" min={1} value={count} onChange={(e) => setCount(e.target.value)} style={{ ...input, width: 70 }} />
-      </td>
-      <td style={cell}>
-        <input value={proof} onChange={(e) => setProof(e.target.value)} placeholder="https://" style={input} />
-      </td>
-      <td style={cell}>
-        <input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} style={input} />
-      </td>
-      <td style={cell}>
-        <button onClick={save} disabled={busy}>Save</button>{" "}
-        <button onClick={() => setEditing(false)} disabled={busy}>Cancel</button>
-        {error && <p style={{ color: "#b00020" }}>{error}</p>}
-      </td>
-    </tr>
+    <Tr>
+      <Td label="Date" className="num">{entry.work_date}</Td>
+      <Td label="Work" className="strong">{entry.label}</Td>
+      <Td label="Count" className="cell-input">
+        <input type="number" min={1} value={count} onChange={(e) => setCount(e.target.value)} className="field" style={{ maxWidth: 96 }} aria-label="Count" />
+      </Td>
+      <Td label="Proof" className="cell-input">
+        <input value={proof} onChange={(e) => setProof(e.target.value)} placeholder="https://" className="field" aria-label="Proof link" />
+      </Td>
+      <Td label="Notes" className="cell-input">
+        <input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} className="field" aria-label="Notes" />
+      </Td>
+      <Td className="actions">
+        <button className="btn small" onClick={save} disabled={busy}>Save</button>
+        <button className="btn secondary small" onClick={() => setEditing(false)} disabled={busy}>Cancel</button>
+        {error && <p className="err" role="alert">{error}</p>}
+      </Td>
+    </Tr>
   );
 }

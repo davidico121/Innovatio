@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 import { pool } from "@/lib/db";
-import { table, th, td, field } from "@/lib/ui";
+import { AdminBar } from "../../ui/BrandBar";
+import { Table, Td, Tr } from "../../ui/Table";
 
 export const dynamic = "force-dynamic";
 
@@ -17,41 +18,38 @@ export default async function IpasPage({ searchParams }: { searchParams: Promise
   );
 
   return (
-    <main>
-      <p><Link href="/admin">&larr; Team consistency</Link></p>
-      <h1>IPAs</h1>
-      <p>An IPA is a set of daily targets for one role. Each member has one IPA.</p>
+    <main id="main" className="page wide stack">
+      <AdminBar current="ipas" />
+      <header>
+        <h1>IPAs</h1>
+        <p className="muted mt-2">An IPA is a set of daily targets for one role. Each member has one IPA.</p>
+      </header>
 
-      <h2>Add an IPA</h2>
-      <form action="/api/admin/ipas" method="post" style={{ display: "grid", gap: 8, maxWidth: 480 }}>
-        <input name="name" placeholder="IPA name, e.g. Scouting IPA" required style={field} />
-        <textarea name="description" placeholder="What this role is for (optional)" rows={3} style={field} />
-        <label><input type="checkbox" name="counts_weekends" /> Targets apply on weekends too</label>
-        <button type="submit" style={field}>Create IPA</button>
-      </form>
-      {error && <p style={{ color: "#b00020" }}>{error}</p>}
-
-      <h2>Existing IPAs</h2>
-      <table style={table}>
-        <thead>
-          <tr>
-            {["Name", "Targets", "Members", "Weekends", "Document"].map((h) => (
-              <th key={h} style={th}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
+      <section>
+        <h2>Existing IPAs</h2>
+        <Table head={["Name", "Targets", "Members", "Weekends", "Document"]}>
           {rows.map((r) => (
-            <tr key={r.id}>
-              <td style={td}><Link href={`/admin/ipas/${r.id}`}>{r.name}</Link></td>
-              <td style={td}>{r.tasks}</td>
-              <td style={td}>{r.members}</td>
-              <td style={td}>{r.counts_weekends ? "included" : "weekdays only"}</td>
-              <td style={td}>{r.document_name ?? "none"}</td>
-            </tr>
+            <Tr key={r.id}>
+              <Td className="cell-name"><Link href={`/admin/ipas/${r.id}`}>{r.name}</Link></Td>
+              <Td label="Targets" className="num">{r.tasks}</Td>
+              <Td label="Members" className="num">{r.members}</Td>
+              <Td label="Weekends">{r.counts_weekends ? "included" : "weekdays only"}</Td>
+              <Td label="Document">{r.document_name ?? "none"}</Td>
+            </Tr>
           ))}
-        </tbody>
-      </table>
+        </Table>
+      </section>
+
+      <section className="card">
+        <h2>Add an IPA</h2>
+        <form action="/api/admin/ipas" method="post" className="formgrid">
+          <input name="name" placeholder="IPA name, e.g. Scouting IPA" required className="field" aria-label="IPA name" />
+          <textarea name="description" placeholder="What this role is for (optional)" rows={3} className="field" aria-label="Description" />
+          <label className="check"><input type="checkbox" name="counts_weekends" /> Targets apply on weekends too</label>
+          <button type="submit" className="btn">Create IPA</button>
+        </form>
+        {error && <p className="err mt-4" role="alert">{error}</p>}
+      </section>
     </main>
   );
 }

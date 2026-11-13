@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-const COLORS = ["#4f46e5", "#16a34a", "#f59e0b", "#ec4899", "#0ea5e9"];
+// Brand colours from the design tokens in globals.css, so the confetti follows the theme.
+const COLORS = ["var(--confetti-1)", "var(--confetti-2)", "var(--confetti-3)", "var(--confetti-4)", "var(--confetti-5)"];
 
 export function celebrate(messages: string[]) {
   if (messages.length) window.dispatchEvent(new CustomEvent("celebrate", { detail: messages }));
