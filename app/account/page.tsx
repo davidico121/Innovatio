@@ -33,6 +33,9 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       <form action="/api/auth/logout" method="post">
         <button type="submit" className="btn secondary block">Sign out</button>
       </form>
+      <p className="small center muted">
+        Managing the team? <Link href="/login?as=admin">Admin sign in</Link>
+      </p>
     </main>
   );
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { currentSession } from "@/lib/auth";
+import { currentSession, isAdmin } from "@/lib/auth";
 import { pool } from "@/lib/db";
 import { dayProgress } from "@/lib/status";
 import { memberStats } from "@/lib/stats";
@@ -21,6 +21,7 @@ export default async function Home() {
   if (!me) redirect("/login");
   if (me.mustSetup) redirect("/welcome");
 
+  const admin = await isAdmin();
   const today = todayLagos();
   const yesterday = shiftDate(today, -1);
   const month = monthStart(today);
@@ -48,6 +49,7 @@ export default async function Home() {
       <Toaster />
       <InstallBanner />
       <BrandBar>
+        {admin && <Link href="/admin" className="navlink">Admin</Link>}
         <Link href="/account" className="navlink">Account</Link>
       </BrandBar>
       <header>

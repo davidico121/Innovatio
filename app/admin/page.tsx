@@ -1,10 +1,10 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 import { consistencyReport, isFlagged } from "@/lib/status";
 import { todayLagos } from "@/lib/lagos";
 import { pool } from "@/lib/db";
-import { AdminBar, BrandHero } from "../ui/BrandBar";
-import PasswordField from "../ui/PasswordField";
+import { AdminBar } from "../ui/BrandBar";
 import { Table, Td, Tr } from "../ui/Table";
 
 export const dynamic = "force-dynamic";
@@ -18,20 +18,7 @@ const accountTone: Record<string, string> = {
 };
 
 export default async function Admin({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  if (!(await isAdmin())) {
-    return (
-      <main id="main" className="page narrow stack">
-        <BrandHero>
-          <h1>Admin</h1>
-          <p className="muted">Enter the admin token to see how the team is doing.</p>
-        </BrandHero>
-        <form action="/api/admin/login" method="post" className="card stack tight">
-          <PasswordField name="token" label="Admin token" autoComplete="current-password" />
-          <button type="submit" className="btn">Enter</button>
-        </form>
-      </main>
-    );
-  }
+  if (!(await isAdmin())) redirect("/login?as=admin");
 
   const { error } = await searchParams;
   const today = todayLagos();

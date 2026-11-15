@@ -287,7 +287,8 @@ a {
 .wordmark { display: grid; line-height: 1.1; }
 .wordmark b { font-family: var(--font-sans); font-weight: 800; font-size: 0.9rem; letter-spacing: var(--ls-wordmark); text-transform: uppercase; color: var(--text-strong); }
 .wordmark span { font-family: var(--font-label); font-weight: 700; font-size: 0.75rem; letter-spacing: var(--ls-label); text-transform: uppercase; color: var(--text-muted); }
-.brandbar nav { display: flex; align-items: center; gap: var(--space-1); flex: 0 0 auto; }
+.brandbar nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-1); flex: 0 1 auto; }
+@media (max-width: 560px) { .brandbar nav { flex: 1 1 100%; justify-content: flex-start; } }
 .navlink {
   display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-4);
   border-radius: var(--radius-full); border: 2px solid transparent;
@@ -295,6 +296,8 @@ a {
 }
 .navlink[aria-current="page"] { background: var(--brand-primary); color: var(--text-on-brand); border-color: var(--border-on-brand); }
 @media (hover: hover) { a.navlink:hover:not([aria-current]) { background: var(--brand-soft); } }
+button.navlink { background: transparent; font-family: inherit; cursor: pointer; }
+@media (hover: hover) { button.navlink:hover { background: var(--brand-soft); } }
 .intro { display: grid; gap: var(--space-3); justify-items: start; margin-bottom: var(--space-5); }
 
 /* ---------- Cards and notes ---------- */

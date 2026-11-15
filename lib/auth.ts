@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { pool } from "./db";
+import { ADMIN_COOKIE, verifyAdminSession } from "./adminAuth";
 
 export const SESSION_COOKIE = "session";
 const SESSION_DAYS = 180;
@@ -60,6 +61,5 @@ export async function currentMember(): Promise<{ id: number; name: string; email
 }
 
 export async function isAdmin(): Promise<boolean> {
-  const c = (await cookies()).get("admin_token")?.value;
-  return !!c && !!process.env.ADMIN_TOKEN && c === process.env.ADMIN_TOKEN;
+  return verifyAdminSession((await cookies()).get(ADMIN_COOKIE)?.value);
 }
