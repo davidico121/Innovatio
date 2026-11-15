@@ -121,7 +121,7 @@ export default async function Home() {
 
           <section className="card">
             <h2>Reminders</h2>
-            <p className="muted">Friendly nudges and the odd bit of encouragement, on this device.</p>
+            <p className="muted">Friendly nudges and the odd bit of encouragement, on this device. They follow your sign-in, so signing out stops them.</p>
             <PushButton />
           </section>
         </div>

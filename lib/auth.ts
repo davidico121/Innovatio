@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { pool } from "./db";
-import { ADMIN_COOKIE, verifyAdminSession } from "./adminAuth";
+import { ADMIN_COOKIE, adminSessionKey } from "./adminAuth";
 
 export const SESSION_COOKIE = "session";
 const SESSION_DAYS = 180;
@@ -61,5 +61,18 @@ export async function currentMember(): Promise<{ id: number; name: string; email
 }
 
 export async function isAdmin(): Promise<boolean> {
-  return verifyAdminSession((await cookies()).get(ADMIN_COOKIE)?.value);
+  return (await currentAdminSessionKey()) !== null;
+}
+
+/** The id of the admin sign-in this request is using, or null when not signed in as admin. */
+export async function currentAdminSessionKey(): Promise<string | null> {
+  return adminSessionKey((await cookies()).get(ADMIN_COOKIE)?.value);
+}
+
+/** The database id of the team member sign-in this request is using, or null. */
+export async function currentSessionId(): Promise<number | null> {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  const { rows } = await pool.query(`select id from sessions where token_hash = $1 and expires_at > now()`, [sha(token)]);
+  return rows[0]?.id ?? null;
 }

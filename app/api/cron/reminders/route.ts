@@ -3,7 +3,7 @@ import { pool } from "@/lib/db";
 import { dayOfYear, shiftDate, todayLagos } from "@/lib/lagos";
 import { PROOF_RETENTION_DAYS, consistencyReport, isFlagged, isMemberDue } from "@/lib/status";
 import { memberStats } from "@/lib/stats";
-import { sendEmail, sendPush } from "@/lib/notify";
+import { adminDeviceCount, sendAdminPush, sendEmail, sendPush } from "@/lib/notify";
 import { MILESTONES, milestoneLine, quoteFor } from "@/lib/copy";
 import { renderEmailHtml, type EmailDot } from "@/lib/emailTemplate";
 
@@ -224,7 +224,7 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  if (kind === "digest" && !(await alreadySent(ADMIN_KEY, "digest")) && process.env.ADMIN_EMAIL) {
+  if (kind === "digest" && !(await alreadySent(ADMIN_KEY, "digest")) && ((await adminDeviceCount()) > 0 || process.env.ADMIN_EMAIL)) {
     const rows = await consistencyReport(7);
     const flagged = rows.filter((r) => isFlagged(r, today));
     const strong = rows.filter((r) => r.days > 0 && r.rate >= 90 && !isFlagged(r, today));
@@ -256,9 +256,16 @@ export async function GET(req: NextRequest) {
         },
         app,
       );
-      await sendEmail(process.env.ADMIN_EMAIL, `Team tracker: ${flagged.length} to nudge, ${strong.length} doing well`, text, html);
-      await markSent(ADMIN_KEY, "digest");
-      sent++;
+      // Push first, like a member's reminders: to the devices an admin sign-in turned on, with counts only and no names.
+      // The email is the fallback when no admin device was reached.
+      const delivered = await sendAdminPush("Admin: team summary", `${flagged.length} to nudge, ${strong.length} doing well`, "/admin");
+      if (delivered === 0 && process.env.ADMIN_EMAIL) {
+        await sendEmail(process.env.ADMIN_EMAIL, `Team tracker: ${flagged.length} to nudge, ${strong.length} doing well`, text, html);
+      }
+      if (delivered > 0 || process.env.ADMIN_EMAIL) {
+        await markSent(ADMIN_KEY, "digest");
+        sent++;
+      }
     } catch (err) {
       failed.push(ADMIN_KEY);
       console.error("digest failed", err);
@@ -274,6 +281,8 @@ export async function GET(req: NextRequest) {
     const logs = await pool.query(`delete from reminder_log where sent_on < $1::date`, [shiftDate(today, -90)]);
     await pool.query(`delete from sessions where expires_at < now()`);
     await pool.query(`delete from login_attempts where created_at < now() - interval '1 day'`);
+    // An admin device that has not been opened in 90 days no longer gets admin notifications.
+    await pool.query(`delete from admin_push_subscriptions where linked_at < now() - interval '90 days'`);
     return NextResponse.json({ kind, screenshotsRemoved: purged.rowCount ?? 0, logRowsRemoved: logs.rowCount ?? 0 });
   }
 

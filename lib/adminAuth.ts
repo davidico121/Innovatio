@@ -1,4 +1,4 @@
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 /**
  * Admin sign-in. One shared admin, set with three environment variables:
@@ -7,8 +7,9 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
  *   ADMIN_TOKEN     the extra secret that was already there.
  * All three must match to sign in. If the password or the token is missing, nobody can sign in.
  *
- * A successful sign-in sets a signed cookie that holds only an expiry time and a signature. It never
- * contains the username, password or token. The signing key is built from all three, so changing any
+ * A successful sign-in sets a signed cookie that holds an expiry time, a random sign-in id and a
+ * signature. It never contains the username, password or token. The sign-in id lets a device that
+ * turned on admin notifications be unlinked when that sign-in ends. The signing key is built from all three, so changing any
  * of them signs every admin out.
  */
 
@@ -47,24 +48,32 @@ function signingKey(): Buffer {
     .digest();
 }
 
-function sign(expires: number): string {
-  return createHmac("sha256", signingKey()).update(`admin.${expires}`).digest("base64url");
+function sign(expires: number, id: string): string {
+  return createHmac("sha256", signingKey()).update(`admin.${expires}.${id}`).digest("base64url");
 }
 
 /** A new cookie value, good for ADMIN_SESSION_HOURS. */
 export function createAdminSession(now = Date.now()): string {
   const expires = now + ADMIN_SESSION_HOURS * 3_600_000;
-  return `${expires}.${sign(expires)}`;
+  const id = randomBytes(12).toString("base64url");
+  return `${expires}.${id}.${sign(expires, id)}`;
+}
+
+/** The sign-in id inside a genuine, unexpired cookie value, or null for anything else. */
+export function adminSessionKey(value: string | undefined, now = Date.now()): string | null {
+  if (!value || !adminConfigured()) return null;
+  const parts = value.split(".");
+  if (parts.length !== 3) return null;
+  const [expiresText, id, signature] = parts;
+  const expires = Number(expiresText);
+  if (!Number.isInteger(expires) || !/^[A-Za-z0-9_-]{16}$/.test(id) || !signature) return null;
+  if (expires < now || expires > now + (ADMIN_SESSION_HOURS + 1) * 3_600_000) return null;
+  return same(signature, sign(expires, id)) ? id : null;
 }
 
 /** True for a genuine, unexpired value made by createAdminSession. */
 export function verifyAdminSession(value: string | undefined, now = Date.now()): boolean {
-  if (!value || !adminConfigured()) return false;
-  const [expiresText, signature] = value.split(".");
-  const expires = Number(expiresText);
-  if (!signature || !Number.isInteger(expires)) return false;
-  if (expires < now || expires > now + (ADMIN_SESSION_HOURS + 1) * 3_600_000) return false;
-  return same(signature, sign(expires));
+  return adminSessionKey(value, now) !== null;
 }
 
 export const adminCookieOptions = {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { currentMember } from "@/lib/auth";
+import { currentMember, currentSessionId } from "@/lib/auth";
 import { pool } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
@@ -11,12 +11,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Bad subscription" }, { status: 400 });
   }
 
+  // The device is linked to this sign-in, so signing out removes it, and a different member signing in on the same phone takes it over.
   await pool.query(
-    `insert into push_subscriptions (member_id, endpoint, p256dh, auth)
-     values ($1, $2, $3, $4)
+    `insert into push_subscriptions (member_id, endpoint, p256dh, auth, session_id)
+     values ($1, $2, $3, $4, $5)
      on conflict (endpoint) do update
-       set member_id = excluded.member_id, p256dh = excluded.p256dh, auth = excluded.auth`,
-    [me.id, s.endpoint, s.keys.p256dh, s.keys.auth],
+       set member_id = excluded.member_id, p256dh = excluded.p256dh, auth = excluded.auth, session_id = excluded.session_id`,
+    [me.id, s.endpoint, s.keys.p256dh, s.keys.auth, await currentSessionId()],
   );
   return NextResponse.json({ ok: true });
 }

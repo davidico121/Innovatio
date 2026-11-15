@@ -5,6 +5,7 @@ import { consistencyReport, isFlagged } from "@/lib/status";
 import { todayLagos } from "@/lib/lagos";
 import { pool } from "@/lib/db";
 import { AdminBar } from "../ui/BrandBar";
+import PushButton from "../PushButton";
 import { Table, Td, Tr } from "../ui/Table";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         <p className="muted mt-2">Last 14 completed days. Today is excluded until it closes.</p>
       </header>
 
+      <div className="dash">
       <section className="card">
         <h2>Add a member</h2>
         <form action="/api/admin/members" method="post" className="formrow">
@@ -58,6 +60,19 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         </form>
         {error && <p className="err mt-4" role="alert">{error}</p>}
       </section>
+
+      <section className="card">
+        <h2>Admin notifications</h2>
+        <p className="muted">
+          Get the daily team summary on this device: how many people need a nudge and how many are doing well. They follow this admin sign-in, so signing out of admin stops them. Your team reminders are separate.
+        </p>
+        <PushButton
+          subscribeUrl="/api/admin/push/subscribe"
+          label="Turn on admin notifications"
+          onText="Admin notifications are on for this device. They stop when you sign out of admin."
+        />
+      </section>
+      </div>
 
       <Table head={["Name", "Account", "IPA", "Days met", "Rate", "Streak", "Last log", "Reminders", "Flag"]}>
         {rows.map((r) => {
