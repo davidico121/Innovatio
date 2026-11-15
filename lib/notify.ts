@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import { pool } from "./db";
+import { isMissingSchema } from "./dbErrors";
 
 let vapidReady = false;
 
@@ -46,13 +47,23 @@ export async function sendPush(memberId: number, title: string, body: string, ur
 
 /** The admin's notification, to the devices linked to an admin sign-in. Returns how many devices it reached. */
 export async function sendAdminPush(title: string, body: string, url = "/admin"): Promise<number> {
-  const { rows } = await pool.query(`select id, endpoint, p256dh, auth from admin_push_subscriptions`);
-  return deliver("admin_push_subscriptions", rows, { title, body, url });
+  try {
+    const { rows } = await pool.query(`select id, endpoint, p256dh, auth from admin_push_subscriptions`);
+    return deliver("admin_push_subscriptions", rows, { title, body, url });
+  } catch (err) {
+    if (isMissingSchema(err)) return 0; // the newest migration has not run: no admin devices yet
+    throw err;
+  }
 }
 
 export async function adminDeviceCount(): Promise<number> {
-  const { rows } = await pool.query(`select count(*)::int as n from admin_push_subscriptions`);
-  return rows[0].n;
+  try {
+    const { rows } = await pool.query(`select count(*)::int as n from admin_push_subscriptions`);
+    return rows[0].n;
+  } catch (err) {
+    if (isMissingSchema(err)) return 0;
+    throw err;
+  }
 }
 
 /** Sends one email. `html` is the branded version; `text` is always sent too, for clients that show only text. */

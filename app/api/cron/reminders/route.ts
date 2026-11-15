@@ -4,6 +4,7 @@ import { dayOfYear, shiftDate, todayLagos } from "@/lib/lagos";
 import { PROOF_RETENTION_DAYS, consistencyReport, isFlagged, isMemberDue } from "@/lib/status";
 import { memberStats } from "@/lib/stats";
 import { adminDeviceCount, sendAdminPush, sendEmail, sendPush } from "@/lib/notify";
+import { isMissingSchema } from "@/lib/dbErrors";
 import { MILESTONES, milestoneLine, quoteFor } from "@/lib/copy";
 import { renderEmailHtml, type EmailDot } from "@/lib/emailTemplate";
 
@@ -283,7 +284,11 @@ export async function GET(req: NextRequest) {
     await pool.query(`delete from sessions where expires_at < now()`);
     await pool.query(`delete from login_attempts where created_at < now() - interval '1 day'`);
     // An admin device that has not been opened in 90 days no longer gets admin notifications.
-    await pool.query(`delete from admin_push_subscriptions where linked_at < now() - interval '90 days'`);
+    try {
+      await pool.query(`delete from admin_push_subscriptions where linked_at < now() - interval '90 days'`);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
     return NextResponse.json({ kind, screenshotsRemoved: purged.rowCount ?? 0, logRowsRemoved: logs.rowCount ?? 0 });
   }
 

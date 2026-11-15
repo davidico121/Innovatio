@@ -14,7 +14,8 @@ Stack: Next.js 15 App Router PWA, Postgres on Neon, `web-push` for notifications
 - Database: Neon, using the pooled connection string (host contains `-pooler`).
 - Scheduled reminders: GitHub Actions (`.github/workflows/reminders.yml`) calls `/api/cron/reminders?kind=...` with a bearer secret. Needs two repository secrets, `APP_URL` and `CRON_SECRET`.
 - Environment variables are listed in `.env.example`. `NEXT_PUBLIC_VAPID_PUBLIC_KEY` is public on purpose. `VAPID_PRIVATE_KEY`, `CRON_SECRET`, `ADMIN_TOKEN`, `RESEND_API_KEY` and `DATABASE_URL` are secrets. A new `NEXT_PUBLIC_` value only takes effect after a redeploy.
-- `schema.sql` is safe to run again on an existing database. Run it in Neon's SQL Editor after any schema change.
+- **Database changes apply themselves on deploy.** `npm run build` first runs `scripts/migrate.mjs`, which applies any file in `migrations/` that the database has not had yet (recorded in the `schema_migrations` table), in one transaction under a lock, then builds. A failed migration changes nothing and fails the build, so the previous version keeps running. With no `DATABASE_URL` it skips, and `SKIP_DB_MIGRATE=1` turns it off. Migration files must be safe to run twice (`create ... if not exists`, `add column if not exists`) and should be additive, so the old code keeps working while the new one deploys. If the Vercel project's Build Command is customised to plain `next build`, migrations will not run, so keep it as `npm run build`. Code that uses a newly added table or column should survive it being missing (see `lib/dbErrors.ts`).
+- To add a database change: put it in a new numbered file in `migrations/`, and also add it to `schema.sql` so a brand new database gets everything. `schema.sql` is for a brand new database and is also safe to run again on an existing one.
 
 ## Concepts
 
@@ -58,7 +59,7 @@ Stack: Next.js 15 App Router PWA, Postgres on Neon, `web-push` for notifications
 
 1. A Postgres database and a `.env.local` based on `.env.example`. Set `PGSSL=false` for a local database.
 2. Generate push keys: `npx web-push generate-vapid-keys`.
-3. Run `schema.sql`.
+3. Run `schema.sql` (a brand new database only; after that, deploys apply `migrations/` themselves, and `npm run migrate` does the same by hand).
 4. `npm run dev`. Use `npm run build` and `npm start` to test production behavior.
 5. To read emails without sending them, set `RESEND_API_URL` to a small local server that logs request bodies.
 6. Test cron jobs with `curl -H "Authorization: Bearer $CRON_SECRET" "http://localhost:3000/api/cron/reminders?kind=morning"`. Add `&force=1` to run `weekly` on a day that is not Monday.
