@@ -256,13 +256,14 @@ export async function GET(req: NextRequest) {
         },
         app,
       );
-      // Push first, like a member's reminders: to the devices an admin sign-in turned on, with counts only and no names.
-      // The email is the fallback when no admin device was reached.
-      const delivered = await sendAdminPush("Admin: team summary", `${flagged.length} to nudge, ${strong.length} doing well`, "/admin");
-      if (delivered === 0 && process.env.ADMIN_EMAIL) {
+      // The email always goes out. It is sent first, so if it fails nothing has gone out yet and the next run
+      // retries without sending the notification twice. The notification (counts only, no names) goes to the
+      // devices an admin sign-in turned on, in addition.
+      if (process.env.ADMIN_EMAIL) {
         await sendEmail(process.env.ADMIN_EMAIL, `Team tracker: ${flagged.length} to nudge, ${strong.length} doing well`, text, html);
       }
-      if (delivered > 0 || process.env.ADMIN_EMAIL) {
+      const delivered = await sendAdminPush("Admin: team summary", `${flagged.length} to nudge, ${strong.length} doing well`, "/admin");
+      if (process.env.ADMIN_EMAIL || delivered > 0) {
         await markSent(ADMIN_KEY, "digest");
         sent++;
       }

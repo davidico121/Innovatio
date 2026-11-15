@@ -23,7 +23,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <main id="main" className="page narrow stack">
         <BrandHero>
           <h1>Admin sign in</h1>
-          <p className="muted">For managers. Enter your username, password and admin token.</p>
+          <p className="muted">For managers. Enter your admin username and password.</p>
         </BrandHero>
         <form action="/api/admin/login" method="post" className="card stack tight">
           <label className="label">
@@ -31,7 +31,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <input name="username" type="text" required autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} className="field" />
           </label>
           <PasswordField name="password" label="Password" autoComplete="current-password" required />
-          <PasswordField name="token" label="Admin token" autoComplete="off" required />
           <button type="submit" className="btn">Sign in as admin</button>
           {error && <p className="err" role="alert">{error}</p>}
         </form>

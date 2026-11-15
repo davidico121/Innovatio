@@ -1,16 +1,15 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 /**
- * Admin sign-in. One shared admin, set with three environment variables:
+ * Admin sign-in. One shared admin, set with two environment variables:
  *   ADMIN_USERNAME  the username. Optional, defaults to "admin". Set it to anything you like.
- *   ADMIN_PASSWORD  the password.
- *   ADMIN_TOKEN     the extra secret that was already there.
- * All three must match to sign in. If the password or the token is missing, nobody can sign in.
+ *   ADMIN_TOKEN     the password. Make it long and random.
+ * Both must match to sign in. If the token is missing, nobody can sign in.
  *
  * A successful sign-in sets a signed cookie that holds an expiry time, a random sign-in id and a
- * signature. It never contains the username, password or token. The sign-in id lets a device that
- * turned on admin notifications be unlinked when that sign-in ends. The signing key is built from all three, so changing any
- * of them signs every admin out.
+ * signature. It never contains the username or the password. The sign-in id lets a device that
+ * turned on admin notifications be unlinked when that sign-in ends. The signing key is built from both, so changing either
+ * signs every admin out.
  */
 
 export const ADMIN_COOKIE = "admin_session";
@@ -23,7 +22,7 @@ export function adminUsername(): string {
 }
 
 export function adminConfigured(): boolean {
-  return !!process.env.ADMIN_PASSWORD && !!process.env.ADMIN_TOKEN;
+  return !!process.env.ADMIN_TOKEN;
 }
 
 const digest = (value: string) => createHash("sha256").update(value).digest();
@@ -33,18 +32,17 @@ function same(a: string, b: string): boolean {
   return timingSafeEqual(digest(a), digest(b));
 }
 
-/** True only when the username, password and token all match. Every field is always checked, so the time taken says nothing about which one was wrong. */
-export function checkAdminCredentials(username: string, password: string, token: string): boolean {
+/** True only when the username and password both match. Both are always checked, so the time taken says nothing about which one was wrong. */
+export function checkAdminCredentials(username: string, password: string): boolean {
   if (!adminConfigured()) return false;
   const userOk = same(username.trim(), adminUsername());
-  const passOk = same(password, process.env.ADMIN_PASSWORD!);
-  const tokenOk = same(token, process.env.ADMIN_TOKEN!);
-  return userOk && passOk && tokenOk;
+  const passOk = same(password, process.env.ADMIN_TOKEN!);
+  return userOk && passOk;
 }
 
 function signingKey(): Buffer {
   return createHash("sha256")
-    .update(`innovatio-admin-session-v1\n${adminUsername()}\n${process.env.ADMIN_PASSWORD}\n${process.env.ADMIN_TOKEN}`)
+    .update(`innovatio-admin-session-v1\n${adminUsername()}\n${process.env.ADMIN_TOKEN}`)
     .digest();
 }
 
