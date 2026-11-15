@@ -39,11 +39,12 @@ export function BrandHero({ children }: { children: ReactNode }) {
   );
 }
 
-export function AdminBar({ current }: { current: "team" | "ipas" }) {
+export function AdminBar({ current }: { current: "team" | "ipas" | "broadcast" }) {
   return (
     <BrandBar sub="Admin" home="/admin">
       <Link href="/admin" className="navlink" aria-current={current === "team" ? "page" : undefined}>Team</Link>
       <Link href="/admin/ipas" className="navlink" aria-current={current === "ipas" ? "page" : undefined}>IPAs</Link>
+      <Link href="/admin/broadcast" className="navlink" aria-current={current === "broadcast" ? "page" : undefined}>Broadcast</Link>
       <Link href="/" className="navlink">My dashboard</Link>
       <form action="/api/admin/logout" method="post">
         <button type="submit" className="navlink">Sign out</button>

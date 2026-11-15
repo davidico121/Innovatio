@@ -155,3 +155,17 @@ create table if not exists admin_push_subscriptions (
   session_key text,
   linked_at timestamptz not null default now()
 );
+
+-- v8: a log of broadcasts the admin sends to the team. Also applied automatically on deploy (migrations/002).
+create table if not exists broadcasts (
+  id serial primary key,
+  title text not null,
+  body text not null,
+  also_email boolean not null default false,
+  members int not null default 0,
+  push_members int not null default 0,
+  push_devices int not null default 0,
+  emailed int not null default 0,
+  email_failed int not null default 0,
+  created_at timestamptz not null default now()
+);

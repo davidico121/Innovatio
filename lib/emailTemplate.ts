@@ -54,7 +54,7 @@ const LABEL = `font-family:Roboto,'Open Sans',Arial,Helvetica,sans-serif;font-we
 
 function paragraphs(items: string[] | undefined, extra = ""): string {
   return (items ?? [])
-    .map((p) => `<p class="tx" style="${BODY}margin:0 0 16px 0;font-size:16px;line-height:24px;color:#101010;${extra}">${esc(p)}</p>`)
+    .map((p) => `<p class="tx" style="${BODY}margin:0 0 16px 0;font-size:16px;line-height:24px;color:#101010;white-space:pre-line;${extra}">${esc(p)}</p>`)
     .join("");
 }
 

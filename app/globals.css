@@ -494,6 +494,7 @@ input[type="checkbox"]:checked {
   .table .cell-input { display: block; text-align: left; }
   .table .cell-input::before { display: block; margin-bottom: 4px; }
   .table .cell-full { display: block; text-align: left; }
+  .table .cell-full::before { display: block; margin-bottom: 4px; }
 }
 
 /* ---------- Celebrations (real wins only) ---------- */
@@ -547,3 +548,17 @@ input[type="checkbox"]:checked {
 .install-steps + p { margin-top: var(--space-3); }
 .has-install-banner .toasts { bottom: calc(max(var(--space-4), env(safe-area-inset-bottom)) + var(--install-h, 150px) + var(--space-3)); }
 @keyframes rise { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- Broadcast (app/admin/broadcast) ---------- */
+.charcount { justify-self: end; font-family: var(--font-sans); font-weight: 400; font-size: 0.8125rem; letter-spacing: normal; text-transform: none; color: var(--text-muted); }
+.notif-preview { display: grid; gap: var(--space-2); }
+.notif-card {
+  display: grid; gap: 2px; padding: var(--space-3) var(--space-4);
+  background: var(--surface-sunken); color: var(--text-body);
+  border: var(--border-thin) solid var(--border-subtle); border-radius: var(--radius-md);
+}
+.notif-meta { display: flex; align-items: center; gap: var(--space-2); font-size: 0.75rem; color: var(--text-muted); }
+.notif-meta span:last-child { margin-left: auto; }
+.notif-icon { border-radius: 4px; }
+.notif-title { font-weight: 800; color: var(--text-strong); overflow-wrap: anywhere; }
+.notif-body { white-space: pre-line; overflow-wrap: anywhere; }
