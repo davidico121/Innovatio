@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/lib/db";
-import { dayOfYear, shiftDate, todayLagos } from "@/lib/lagos";
+import { dayOfYear, shiftDate, todayLagos, TZ } from "@/lib/lagos";
 import { PROOF_RETENTION_DAYS, consistencyReport, isFlagged, isMemberDue } from "@/lib/status";
 import { memberStats } from "@/lib/stats";
 import { adminDeviceCount, sendAdminPush, sendEmail, sendPush } from "@/lib/notify";
 import { isMissingSchema } from "@/lib/dbErrors";
-import { MILESTONES, milestoneLine, quoteFor } from "@/lib/copy";
+import { MILESTONES, milestoneLine, planMorningMessage, planNightMessage, quoteFor } from "@/lib/copy";
+import { planCount } from "@/lib/plan";
 import { renderEmailHtml, type EmailDot } from "@/lib/emailTemplate";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,10 @@ export const maxDuration = 60;
  * Trigger from any scheduler with header `Authorization: Bearer $CRON_SECRET`:
  *   ?kind=morning  clean-slate or streak message, plus milestone emails
  *   ?kind=evening  gentle nudge for anyone with today still open
+ *   ?kind=plan_night    late night: ask members who are due tomorrow and have not planned it to plan tomorrow
+ *   ?kind=plan_morning  early morning: ask members who are due today and have not planned it to plan today
+ *                       (both are push only, never repeat in a day, and skip a run that fires at the wrong time
+ *                       of day unless &force=1)
  *   ?kind=quote    an occasional encouragement (every other day, pushes only)
  *   ?kind=weekly   a recap email for the week just finished (Mondays only, add &force=1 to override)
  *   ?kind=digest   email the admin: who needs a nudge, who is doing well
@@ -26,7 +31,7 @@ export const maxDuration = 60;
  */
 const ADMIN_KEY = 0;
 
-type Msg = { title: string; body: string; email?: { subject: string; text: string; html?: string }; emailAlways?: boolean };
+type Msg = { title: string; body: string; url?: string; email?: { subject: string; text: string; html?: string }; emailAlways?: boolean };
 type Member = { id: number; name: string; email: string };
 
 export async function GET(req: NextRequest) {
@@ -35,7 +40,7 @@ export async function GET(req: NextRequest) {
   }
 
   const kind = req.nextUrl.searchParams.get("kind");
-  if (!["morning", "evening", "quote", "weekly", "digest", "cleanup"].includes(kind ?? "")) {
+  if (!["morning", "evening", "quote", "weekly", "digest", "cleanup", "plan_night", "plan_morning"].includes(kind ?? "")) {
     return NextResponse.json({ error: "Unknown kind" }, { status: 400 });
   }
   const today = todayLagos();
@@ -61,7 +66,7 @@ export async function GET(req: NextRequest) {
         if (await alreadySent(m.id, k)) continue;
         const msg = await build(m);
         if (!msg) continue;
-        const delivered = await sendPush(m.id, msg.title, msg.body, "/");
+        const delivered = await sendPush(m.id, msg.title, msg.body, msg.url ?? "/");
         if (msg.email && (msg.emailAlways || delivered === 0)) await sendEmail(m.email, msg.email.subject, msg.email.text, msg.email.html);
         await markSent(m.id, k);
         sent++;
@@ -124,6 +129,25 @@ export async function GET(req: NextRequest) {
           ),
         },
       };
+    });
+  }
+
+  // Plan reminders. Only members who are due that day and have nothing planned yet, once a day, by push.
+  // The morning one is also the follow-up for anyone who did not plan the night before.
+  if (kind === "plan_night" || kind === "plan_morning") {
+    const lagosHour = Number(new Date().toLocaleString("en-GB", { timeZone: TZ, hour: "2-digit", hour12: false }));
+    const forced = req.nextUrl.searchParams.get("force") === "1";
+    const night = kind === "plan_night";
+    // A run delayed into the wrong part of the day would ask for the wrong day's plan, so it does nothing.
+    if (!forced && (night ? lagosHour < 18 : lagosHour >= 13)) {
+      return NextResponse.json({ kind, sent: 0, failed: [], skipped: `${String(lagosHour).padStart(2, "0")}:00 is the wrong time of day for this reminder` });
+    }
+    const target = night ? shiftDate(today, 1) : today;
+    await perMember(kind, async (m) => {
+      if (!(await isMemberDue(m.id, target))) return null;
+      if ((await planCount(m.id, target)) > 0) return null;
+      const line = (night ? planNightMessage : planMorningMessage)(m.id, dayOfYear(today));
+      return { title: line.title, body: line.body, url: night ? "/?plan=tomorrow#plan" : "/?plan=today#plan" };
     });
   }
 

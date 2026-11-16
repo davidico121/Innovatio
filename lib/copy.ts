@@ -80,3 +80,26 @@ export function allDoneLine(streak: number): string {
 export function freshStartLine(): string {
   return "Yesterday got away from you. That is fine. Today is a clean page, and your streak restarts the moment you finish it.";
 }
+
+/** Late-night asks to plan tomorrow, and the morning ask to plan today. Warm, short, never guilt. */
+const PLAN_NIGHT: { title: string; body: string }[] = [
+  { title: "Plan tomorrow", body: "Two minutes tonight makes tomorrow lighter. What do you want to get done?" },
+  { title: "Set up tomorrow", body: "Wake up knowing what matters. Add a few things to tomorrow's plan." },
+  { title: "Tomorrow starts tonight", body: "Pick what you want to get done tomorrow, then rest easy." },
+  { title: "A quick plan for tomorrow", body: "Add two or three things you want to finish tomorrow." },
+];
+const PLAN_MORNING: { title: string; body: string }[] = [
+  { title: "Plan your day", body: "Good morning. Add a few things you want to get done today." },
+  { title: "What is today for?", body: "Take a minute to set your day. It makes the first task easier to start." },
+  { title: "Set up your day", body: "A plan takes two minutes and carries the whole day. Add yours now." },
+  { title: "Make today yours", body: "Choose what you want to get done today and start with the first one." },
+];
+
+export function planNightMessage(seed: number, dayOfYear: number): { title: string; body: string } {
+  return PLAN_NIGHT[(seed * 3 + dayOfYear) % PLAN_NIGHT.length];
+}
+
+export function planMorningMessage(seed: number, dayOfYear: number): { title: string; body: string } {
+  return PLAN_MORNING[(seed * 3 + dayOfYear) % PLAN_MORNING.length];
+}
+

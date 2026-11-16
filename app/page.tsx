@@ -16,7 +16,8 @@ import Goals from "./Goals";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
+  const { plan } = await searchParams;
   const me = await currentSession();
   if (!me) redirect("/login");
   if (me.mustSetup) redirect("/welcome");
@@ -24,6 +25,7 @@ export default async function Home() {
   const admin = await isAdmin();
   const today = todayLagos();
   const yesterday = shiftDate(today, -1);
+  const tomorrow = shiftDate(today, 1);
   const month = monthStart(today);
   const hour = Number(new Date().toLocaleString("en-GB", { timeZone: TZ, hour: "2-digit", hour12: false }));
 
@@ -31,17 +33,18 @@ export default async function Home() {
     memberStats(me.id, today),
     dayProgress(me.id, yesterday),
     pool.query(
-      `select id, title, scope, (done_at is not null) as done from todos
-        where member_id = $1 and ((scope = 'day' and period_start = $2) or (scope = 'week' and period_start = $3))
+      `select id, title, scope, (done_at is not null) as done, to_char(period_start, 'YYYY-MM-DD') as day from todos
+        where member_id = $1 and ((scope = 'day' and period_start in ($2, $4)) or (scope = 'week' and period_start = $3))
         order by created_at`,
-      [me.id, today, weekStart(today)],
+      [me.id, today, weekStart(today), tomorrow],
     ),
     pool.query(`select id, title, target, progress from goals where member_id = $1 and month = $2 order by created_at`, [me.id, month]),
   ]);
 
   const missedYesterday = yesterdayRows.length > 0 && yesterdayRows.some((r) => !r.met);
   const monthLabel = new Date(`${month}T00:00:00Z`).toLocaleString("en-GB", { month: "long", timeZone: "UTC" });
-  const dayTodos = todosRes.rows.filter((t) => t.scope === "day");
+  const dayTodos = todosRes.rows.filter((t) => t.scope === "day" && t.day === today);
+  const tomorrowTodos = todosRes.rows.filter((t) => t.scope === "day" && t.day === tomorrow);
   const weekTodos = todosRes.rows.filter((t) => t.scope === "week");
 
   return (
@@ -114,7 +117,7 @@ export default async function Home() {
         </div>
 
         <div className="col">
-          <Todos day={dayTodos} week={weekTodos} />
+          <Todos day={dayTodos} tomorrow={tomorrowTodos} week={weekTodos} initialDay={plan === "tomorrow" ? "tomorrow" : "today"} />
           <Goals goals={goalsRes.rows} monthLabel={monthLabel} />
 
           <InstallCard />
