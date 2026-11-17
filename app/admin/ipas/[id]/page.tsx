@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 import { pool } from "@/lib/db";
+import { isMissingSchema } from "@/lib/dbErrors";
+import { KIND_LABEL, type Kind } from "@/lib/resourceLinks";
 import { AdminBar } from "../../../ui/BrandBar";
 import { Table, Td, Tr } from "../../../ui/Table";
 
@@ -33,6 +35,19 @@ export default async function IpaPage({
     pool.query(`select key, label from work_types order by label`),
     pool.query(`select name from members where ipa_id = $1 and active order by name`, [ipa.id]),
   ]);
+
+  // Resources tagged to this IPA. Optional, so a database that has not had the newest update yet still shows the page.
+  let linked: { id: number; title: string; kind: Kind; published: boolean }[] = [];
+  try {
+    linked = (
+      await pool.query(
+        `select r.id, r.title, r.kind, r.published from resources r join resource_ipas ri on ri.resource_id = r.id where ri.ipa_id = $1 order by r.position, r.id`,
+        [ipa.id],
+      )
+    ).rows;
+  } catch (err) {
+    if (!isMissingSchema(err)) throw err;
+  }
 
   const assigned = new Set(tasks.rows.map((t) => t.work_key));
   const available = types.rows.filter((t) => !assigned.has(t.key));
@@ -75,6 +90,24 @@ export default async function IpaPage({
             <Tr><Td className="cell-full" colSpan={4}>No targets yet.</Td></Tr>
           )}
         </Table>
+      </section>
+
+      <section className="card">
+        <div className="row between wrap">
+          <h2 style={{ margin: 0 }}>Resources for this IPA</h2>
+          <Link href={`/admin/resources/new?ipa=${ipa.id}`} className="btn secondary small">Add a resource</Link>
+        </div>
+        {linked.length === 0 ? (
+          <p className="muted mt-3">None yet. Videos and guides you tag to this IPA show first for its members.</p>
+        ) : (
+          <ul className="plain mt-3">
+            {linked.map((r) => (
+              <li key={r.id}>
+                <Link href={`/admin/resources/${r.id}`}>{r.title}</Link> <span className="muted small">{KIND_LABEL[r.kind]}{r.published ? "" : ", draft"}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <div className="dash">

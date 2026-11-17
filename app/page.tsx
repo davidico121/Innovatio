@@ -11,6 +11,9 @@ import PushButton from "./PushButton";
 import Toaster from "./Toaster";
 import { BrandBar } from "./ui/BrandBar";
 import { InstallBanner, InstallCard } from "./ui/InstallPrompt";
+import { KindIcon } from "./ui/KindIcon";
+import { isMissingSchema } from "@/lib/dbErrors";
+import { listForMember, type MemberResource } from "@/lib/resources";
 import Todos from "./Todos";
 import Goals from "./Goals";
 
@@ -41,6 +44,18 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ p
     pool.query(`select id, title, target, progress from goals where member_id = $1 and month = $2 order by created_at`, [me.id, month]),
   ]);
 
+  // A few resources to point at: the newest ones for this member's IPA, then the pinned and the rest. Optional, so a missing table never breaks the dashboard.
+  let picks: MemberResource[] = [];
+  let resourceCount = 0;
+  try {
+    const ipaRow = (await pool.query(`select ipa_id from members where id = $1`, [me.id])).rows[0];
+    const all = await listForMember(ipaRow?.ipa_id ?? null);
+    resourceCount = all.length;
+    picks = [...all.filter((r) => r.isNew || r.forMe || r.pinned), ...all].filter((r, i, a) => a.findIndex((x) => x.id === r.id) === i).slice(0, 3);
+  } catch (err) {
+    if (!isMissingSchema(err)) throw err;
+  }
+
   const missedYesterday = yesterdayRows.length > 0 && yesterdayRows.some((r) => !r.met);
   const monthLabel = new Date(`${month}T00:00:00Z`).toLocaleString("en-GB", { month: "long", timeZone: "UTC" });
   const dayTodos = todosRes.rows.filter((t) => t.scope === "day" && t.day === today);
@@ -53,6 +68,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ p
       <InstallBanner />
       <BrandBar>
         {admin && <Link href="/admin" className="navlink">Admin</Link>}
+        <Link href="/resources" className="navlink">Resources</Link>
         <Link href="/account" className="navlink">Account</Link>
       </BrandBar>
       <header>
@@ -119,6 +135,24 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ p
         <div className="col">
           <Todos day={dayTodos} tomorrow={tomorrowTodos} week={weekTodos} initialDay={plan === "tomorrow" ? "tomorrow" : "today"} />
           <Goals goals={goalsRes.rows} monthLabel={monthLabel} />
+
+          {picks.length > 0 && (
+            <section className="card" aria-labelledby="res-title">
+              <div className="row between">
+                <h2 id="res-title" style={{ margin: 0 }}>Resources</h2>
+                <Link href="/resources" className="link">See all {resourceCount}</Link>
+              </div>
+              <p className="muted mt-2">Videos and guides picked for the team.</p>
+              <div className="res-mini mt-3">
+                {picks.map((r) => (
+                  <Link key={r.id} href="/resources" className="res-row">
+                    <span className={`res-icon k-${r.kind}`}><KindIcon kind={r.kind} size={18} /></span>
+                    <span className="t">{r.title}{r.isNew ? " " : ""}{r.isNew && <span className="badge brand">New</span>}</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
           <InstallCard />
 

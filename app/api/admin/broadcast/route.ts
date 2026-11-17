@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdmin } from "@/lib/auth";
 import { pool } from "@/lib/db";
 import { isMissingSchema } from "@/lib/dbErrors";
-import { sendEmail, sendPush } from "@/lib/notify";
-import { renderEmailHtml } from "@/lib/emailTemplate";
+import { deliverToMembers } from "@/lib/broadcast";
 
 export const dynamic = "force-dynamic";
 // Sending to every member one by one, with a pause between emails, can outlast the host default.
@@ -12,10 +11,7 @@ export const maxDuration = 60;
 // Not exported: a Next.js route file may only export its request handlers and settings.
 const TITLE_MAX = 80;
 const MESSAGE_MAX = 400;
-/** The email service allows about two requests a second, so emails go out a little slower than that. */
-const EMAIL_GAP_MS = 600;
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** Control characters and stray whitespace do not belong in a notification. */
 const clean = (v: unknown, max: number) =>
   String(v ?? "")
@@ -23,17 +19,6 @@ const clean = (v: unknown, max: number) =>
     .replace(/\r\n/g, "\n")
     .trim()
     .slice(0, max + 1);
-
-async function sendOneEmail(to: string, subject: string, text: string, html: string) {
-  try {
-    await sendEmail(to, subject, text, html);
-  } catch (err) {
-    // One retry if the email service says slow down.
-    if (!String((err as Error).message).includes("429")) throw err;
-    await sleep(1500);
-    await sendEmail(to, subject, text, html);
-  }
-}
 
 /**
  * Sends a message from the admin to every active member's devices, and optionally to their email too.
@@ -81,49 +66,7 @@ export async function POST(req: NextRequest) {
   }
 
   const members = (await pool.query(`select id, name, email from members where active order by id`)).rows as { id: number; name: string; email: string }[];
-  const app = process.env.APP_URL;
-  let pushDevices = 0;
-  let pushMembers = 0;
-  let emailed = 0;
-  let emailFailed = 0;
-
-  for (const m of members) {
-    try {
-      const reached = await sendPush(m.id, title, message, "/");
-      pushDevices += reached;
-      if (reached > 0) pushMembers++;
-    } catch (err) {
-      console.error(`broadcast push failed for member ${m.id}`, err);
-    }
-  }
-
-  if (alsoEmail) {
-    for (const [i, m] of members.entries()) {
-      if (i > 0) await sleep(EMAIL_GAP_MS);
-      const first = m.name.split(" ")[0];
-      try {
-        await sendOneEmail(
-          m.email,
-          title,
-          `Hi ${first},\n\n${message}\n\n${app ?? ""}`.trim(),
-          renderEmailHtml(
-            {
-              preheader: message.slice(0, 110),
-              heading: title,
-              intro: [`Hi ${first},`, ...message.split(/\n{2,}/)],
-              button: app ? { label: "Open the app", url: app } : undefined,
-              footer: "A message from your team. Sent by Innovatio Team Tracker.",
-            },
-            app,
-          ),
-        );
-        emailed++;
-      } catch (err) {
-        emailFailed++;
-        console.error(`broadcast email failed for member ${m.id}`, err);
-      }
-    }
-  }
+  const { pushMembers, pushDevices, emailed, emailFailed } = await deliverToMembers(members, { title, message, path: "/", email: alsoEmail });
 
   await pool.query(
     `update broadcasts set members = $2, push_members = $3, push_devices = $4, emailed = $5, email_failed = $6 where id = $1`,
